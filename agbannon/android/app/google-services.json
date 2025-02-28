@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "344110366088",
+    "project_id": "dclic-market-93bdb",
+    "storage_bucket": "dclic-market-93bdb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:344110366088:android:5b2c578888bd2f37754e3d",
+        "android_client_info": {
+          "package_name": "com.example.agbannon"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCV1CM4CGrlcIVx7oTyVR-3bSFkqM-3Z0Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
