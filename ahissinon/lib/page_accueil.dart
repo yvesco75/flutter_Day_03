@@ -1,86 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:background_app_bar/background_app_bar.dart';
 
-class PageAccueil extends StatelessWidget {
-  const PageAccueil({super.key});
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Image de fond avec opacité
-        Positioned(
-          top: 42,
-          left: 0,
-          child: Opacity(
-            opacity: 0.9,
-            child: Image.asset(
-              '17Sep24_Free_Upload__1_-removebg-preview', // Image de fond
-              width: 393,
-              height: 251,
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-        // Rectangle blanc contenant le logo et l’icône de profil
-        Positioned(
-          top: 0,
-          left: 0,
-          child: Container(
-            width: 393,
-            height: 52,
-            color: Colors.white,
-            child: Stack(
-              children: [
-                // Logo (une partie en dehors du rectangle)
-                Positioned(
-                  left: -22,
-                  top: -47,
-                  child: Image.asset(
-                    'market.webp', // Logo
-                    width: 179,
-                    height: 179,
-                  ),
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 220.0,
+            floating: false,
+            pinned: true,
+            backgroundColor: Colors.orange,
+            flexibleSpace: BackgroundFlexibleSpaceBar(
+              titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+              title: const Text(
+                "Simplifier votre quotidien en effectuant vos achats\npartout et à tout moment.",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
                 ),
-                // Icône de profil
-                Positioned(
-                  right: 16,
-                  top: 10,
-                  child: GestureDetector(
-                    onTap: () {
-                      // Naviguer vers une nouvelle page (à implémenter)
-                    },
-                    child: Icon(
-                      Icons.account_circle,
-                      size: 32,
-                      color: Colors.black,
+                textAlign: TextAlign.center,
+              ),
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    'asset/market.webp', // Assurez-vous que le chemin est correct
+                    fit: BoxFit.cover,
+                  ),
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Image.asset(
+                      'asset/logoahissinon.png', // Assurez-vous que le chemin est correct
+                      width: 60,
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        // Texte au centre de l'image
-        Positioned(
-          top: 138,
-          left: 22,
-          child: SizedBox(
-            width: 341,
-            height: 112,
-            child: Text(
-              "Simplifier votre quotidien en\n"
-              "effectuant vos achats partout et à\n"
-              "tout moment.",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'RobotoCondensed',
-                fontWeight: FontWeight.bold,
-                fontSize: 24,
-                color: Colors.white,
+                ],
               ),
             ),
+            leading: IconButton(
+              icon: const Icon(Icons.menu, color: Colors.white),
+              onPressed: () {
+                debugPrint("Menu ouvert");
+              },
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.account_circle, color: Colors.white),
+                onPressed: () {
+                  debugPrint("Profil ouvert");
+                },
+              ),
+            ],
           ),
-        ),
-      ],
+          // ... autres parties à ajouter ici ...
+        ],
+      ),
     );
   }
 }

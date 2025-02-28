@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'page_accueil.dart'; // Importation de la page d'accueil
+import 'page_accueil.dart'; // Vérifie que ce fichier existe
 
 void main() {
   runApp(const MyApp());
@@ -11,12 +11,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false, // Supprime le bandeau debug
+      debugShowCheckedModeBanner: false,
       title: 'Mon Application',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.orange,
       ),
-      home: const PageAccueil(), // Affichage de la page d'accueil
+      home: const HomePage(), // Assure-toi que cette classe existe bien
     );
   }
 }

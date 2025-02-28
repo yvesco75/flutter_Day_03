@@ -34,6 +34,7 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  background_app_bar: ^2.1.0+1
 
 dev_dependencies:
   flutter_test:
@@ -57,9 +58,13 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-   #To add assets to your application, add an assets section, like this:
-   #assets:
-    # - images
+  # To add assets to your application, add an assets section, like this:
+  assets:
+     - asset/market.webp
+     - asset/logoahissinon.png
+
+  
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 
@@ -79,13 +84,6 @@ flutter:
   #         style: italic
   #   - family: Trajan Pro
   #     fonts:
-  flutter:
-  uses-material-design: true
-
-  assets:
-    - asset/market.webp
-    asset/logoahissinon.png
-
   #       - asset: fonts/TrajanPro.ttf
   #       - asset: fonts/TrajanPro_Bold.ttf
   #         weight: 700
