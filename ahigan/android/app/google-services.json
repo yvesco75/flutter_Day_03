@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "803457253528",
+    "project_id": "dclicmarket-3ee30",
+    "storage_bucket": "dclicmarket-3ee30.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:803457253528:android:f2dd98ed265bf80c92d0ed",
+        "android_client_info": {
+          "package_name": "com.example.ahigan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvtpjW9_rrbnZRyrb-nl6xnSrIM6M_oRQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
