@@ -1,202 +1,181 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Import for TextInputFormatter
-import 'package:flutter_login/flutter_login.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../config/routes.dart';
-import '../dashboard_screen.dart';
-import '../../widgets/common/loading.dart';
+import 'package:email_validator/email_validator.dart';
+import '../../services/auth_service.dart';
+import 'forgot_password_screen.dart'; // Assurez-vous que le fichier est correctement importé
+import '../home/home_screen.dart'; // Importez votre écran d'accueil (HomeScreen)
 
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+class LoginScreen extends StatefulWidget {
+  final Function toggleView;
 
-  // Fonction pour valider l'email
-  bool isValidEmail(String email) {
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    return emailRegex.hasMatch(email);
-  }
+  LoginScreen({required this.toggleView});
+
+  @override
+  _LoginScreenState createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  String email = '';
+  String password = '';
+  String error = '';
+  bool loading = false;
+  bool _obscureText = true;
 
   @override
   Widget build(BuildContext context) {
-    const inputBorder = BorderRadius.vertical(
-      bottom: Radius.circular(10.0),
-      top: Radius.circular(20.0),
-    );
+    final authService =
+        Provider.of<AuthService>(context); // Accès à AuthService
 
-    final authProvider = Provider.of<AuthProvider>(context);
-
-    return FlutterLogin(
-      logo: const AssetImage('images/profil.jpg'),
-      onLogin: (LoginData loginData) async {
-        if (loginData.name.isEmpty || loginData.password.isEmpty) {
-          return 'Veuillez remplir tous les champs';
-        }
-        if (!isValidEmail(loginData.name)) {
-          return 'Email invalide';
-        }
-
-        final success = await authProvider.login(
-          email: loginData.name,
-          password: loginData.password,
-        );
-
-        if (success) {
-          Navigator.of(context).pushReplacementNamed(Routes.home);
-        }
-
-        return null;
-      },
-      onSignup: (SignupData signupData) async {
-        if (signupData.name == null || signupData.password == null) {
-          return 'Veuillez remplir tous les champs';
-        }
-        if (signupData.name!.isEmpty || signupData.password!.isEmpty) {
-          return 'Veuillez remplir tous les champs';
-        }
-
-        final confirmPassword =
-            signupData.additionalSignupData?['confirmPassword'];
-        if (signupData.password != confirmPassword) {
-          return 'Les mots de passe ne correspondent pas';
-        }
-
-        final name = signupData.additionalSignupData?['name'];
-        final phone = signupData.additionalSignupData?['phone'];
-
-        print('Nom: $name, Téléphone: $phone');
-
-        return null;
-      },
-      onSubmitAnimationCompleted: () {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(
-          builder: (context) => const DashboardScreen(),
-        ));
-      },
-      onRecoverPassword: (String email) async {
-        if (email.isEmpty || !isValidEmail(email)) {
-          return 'Email invalide';
-        }
-        return null;
-      },
-      additionalSignupFields: [
-        UserFormField(
-          keyName: 'name',
-          displayName: 'Nom',
-          icon: const Icon(Icons.person),
-          fieldValidator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Veuillez entrer votre nom';
-            }
-            return null;
-          },
-        ),
-        UserFormField(
-          keyName: 'phone',
-          displayName: 'Téléphone',
-          icon: const Icon(Icons.phone),
-          userType: LoginUserType.phone,
-          fieldValidator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Veuillez entrer votre téléphone';
-            }
-            if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
-              return 'Le téléphone ne doit contenir que des chiffres';
-            }
-            return null;
-          },
-        ),
-        UserFormField(
-          keyName: 'confirmPassword',
-          displayName: 'Confirmer le mot de passe',
-          icon: const Icon(Icons.lock_outline),
-          fieldValidator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Veuillez confirmer votre mot de passe';
-            }
-            return null;
-          },
-        ),
-      ],
-      messages: LoginMessages(
-        userHint: 'Email',
-        passwordHint: 'Mot de passe',
-        confirmPasswordHint: 'Confirmer le mot de passe',
-        loginButton: 'SE CONNECTER',
-        signupButton: 'S\'INSCRIRE',
-        forgotPasswordButton: 'Mot de passe oublié ?',
-        recoverPasswordButton: 'RÉCUPÉRER',
-        goBackButton: 'RETOUR',
-        confirmPasswordError: 'Les mots de passe ne correspondent pas !',
-        recoverPasswordDescription:
-            'Veuillez entrer votre email pour récupérer votre mot de passe.',
-        recoverPasswordSuccess: 'Mot de passe récupéré avec succès',
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Connexion'),
+        automaticallyImplyLeading: false, // Désactive la flèche de retour
+        actions: [
+          TextButton.icon(
+            icon: Icon(Icons.person,
+                color: const Color.fromARGB(255, 97, 13, 233)),
+            label: Text(
+              'S\'inscrire',
+              style: TextStyle(color: const Color.fromARGB(255, 97, 13, 233)),
+            ),
+            onPressed: () => widget.toggleView(),
+          ),
+        ],
       ),
-      theme: LoginTheme(
-        primaryColor: Colors.teal,
-        accentColor: Colors.yellow,
-        errorColor: Colors.deepOrange,
-        titleStyle: const TextStyle(
-          color: Colors.greenAccent,
-          fontFamily: 'Quicksand',
-          letterSpacing: 4,
-        ),
-        bodyStyle: const TextStyle(
-          fontStyle: FontStyle.italic,
-          decoration: TextDecoration.underline,
-        ),
-        textFieldStyle: const TextStyle(
-          color: Colors.orange,
-          shadows: [Shadow(color: Colors.yellow, blurRadius: 2)],
-        ),
-        buttonStyle: const TextStyle(
-          fontWeight: FontWeight.w800,
-          color: Colors.yellow,
-        ),
-        cardTheme: CardTheme(
-          color: Colors.yellow.shade100,
-          elevation: 5,
-          margin: const EdgeInsets.only(top: 15),
-          shape: ContinuousRectangleBorder(
-              borderRadius: BorderRadius.circular(100.0)),
-        ),
-        inputTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.purple.withOpacity(.1),
-          contentPadding: EdgeInsets.zero,
-          errorStyle: const TextStyle(
-            backgroundColor: Colors.orange,
-            color: Colors.white,
-          ),
-          labelStyle: const TextStyle(fontSize: 12),
-          enabledBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.blue.shade700, width: 4),
-            borderRadius: inputBorder,
-          ),
-          focusedBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.blue.shade400, width: 5),
-            borderRadius: inputBorder,
-          ),
-          errorBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.red.shade700, width: 7),
-            borderRadius: inputBorder,
-          ),
-          focusedErrorBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.red.shade400, width: 8),
-            borderRadius: inputBorder,
-          ),
-          disabledBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey, width: 5),
-            borderRadius: inputBorder,
-          ),
-        ),
-        buttonTheme: LoginButtonTheme(
-          splashColor: Colors.purple,
-          backgroundColor: Colors.pinkAccent,
-          highlightColor: Colors.lightGreen,
-          elevation: 9.0,
-          highlightElevation: 6.0,
-          shape: BeveledRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+      body: Container(
+        padding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 50.0),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                SizedBox(height: 20.0),
+                Image.asset(
+                  'images/chariot.jpg',
+                  height: 150,
+                  width: 200,
+                ),
+                SizedBox(height: 30.0),
+                TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: Icon(Icons.email),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (val) => !EmailValidator.validate(val ?? '')
+                      ? 'Entrez un email valide'
+                      : null,
+                  onChanged: (val) {
+                    setState(() => email = val);
+                  },
+                ),
+                SizedBox(height: 20.0),
+                TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Mot de passe',
+                    prefixIcon: Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscureText
+                          ? Icons.visibility
+                          : Icons.visibility_off),
+                      onPressed: () {
+                        setState(() {
+                          _obscureText = !_obscureText;
+                        });
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  obscureText: _obscureText,
+                  validator: (val) => (val?.length ?? 0) < 6
+                      ? 'Le mot de passe doit contenir au moins 6 caractères'
+                      : null,
+                  onChanged: (val) {
+                    setState(() => password = val);
+                  },
+                ),
+                SizedBox(height: 10.0),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    child: Text(
+                      'Mot de passe oublié?',
+                      style: TextStyle(
+                        color: Colors.blue[700],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => forgotPasswordScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                SizedBox(height: 20.0),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  child: loading
+                      ? CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          'Se connecter',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                  onPressed: loading
+                      ? null
+                      : () async {
+                          if (_formKey.currentState?.validate() ?? false) {
+                            setState(() => loading = true);
+
+                            try {
+                              await authService.signInWithEmailAndPassword(
+                                email: email,
+                                password: password,
+                              );
+
+                              // Redirection vers l'écran d'accueil après une connexion réussie
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => HomeScreen(),
+                                ),
+                              );
+                            } catch (e) {
+                              setState(() {
+                                error =
+                                    'Identifiants incorrects. Veuillez réessayer.';
+                              });
+                            } finally {
+                              setState(() => loading = false);
+                            }
+                          }
+                        },
+                ),
+                SizedBox(height: 12.0),
+                Text(
+                  error,
+                  style: TextStyle(color: Colors.red, fontSize: 14.0),
+                ),
+              ],
+            ),
           ),
         ),
       ),

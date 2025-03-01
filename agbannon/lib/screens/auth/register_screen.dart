@@ -1,14 +1,13 @@
-// lib/screens/auth/register_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../config/routes.dart';
-import '../../utils/validators.dart';
-import '../../widgets/common/loading.dart';
+import 'package:email_validator/email_validator.dart';
+import '../../services/auth_service.dart';
+import 'forgot_password_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({Key? key}) : super(key: key);
+  final Function toggleView;
+
+  RegisterScreen({required this.toggleView});
 
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
@@ -16,238 +15,268 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nomController = TextEditingController();
-  final _prenomController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _telephoneController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
-
-  @override
-  void dispose() {
-    _nomController.dispose();
-    _prenomController.dispose();
-    _emailController.dispose();
-    _telephoneController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _register() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-      final success = await authProvider.register(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        nom: _nomController.text.trim(),
-        prenom: _prenomController.text.trim(),
-        telephone: _telephoneController.text.trim(),
-      );
-
-      if (success && mounted) {
-        Navigator.of(context).pushReplacementNamed(Routes.home);
-      }
-    }
-  }
+  String email = '';
+  String password = '';
+  String confirmPassword = '';
+  String nom = ''; // Ajouté
+  String prenom = ''; // Ajouté
+  String telephone = ''; // Ajouté
+  String error = '';
+  bool loading = false;
+  bool _obscureTextPassword = true;
+  bool _obscureTextConfirmPassword = true;
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
+    final authService = Provider.of<AuthService>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Inscription Marchand'), elevation: 0),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Affichage des erreurs
-                  if (authProvider.error != null)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.shade200),
-                      ),
-                      child: Text(
-                        authProvider.error!,
-                        style: TextStyle(color: Colors.red.shade800),
-                      ),
+      appBar: AppBar(
+        title: Text('Inscription'),
+        automaticallyImplyLeading: false, // Désactive la flèche de retour
+        actions: [
+          TextButton.icon(
+            icon: Icon(Icons.login,
+                color: const Color.fromARGB(255, 97, 13, 233)),
+            label: Text('Se connecter',
+                style:
+                    TextStyle(color: const Color.fromARGB(255, 97, 13, 233))),
+            onPressed: () => widget.toggleView(),
+          ),
+        ],
+      ),
+      body: Container(
+        padding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 50.0),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                SizedBox(height: 20.0),
+                Image.asset(
+                  'images/profil.jpg',
+                  height: 100,
+                  width: 150,
+                ),
+                SizedBox(height: 20.0),
+                TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Nom',
+                    prefixIcon: Icon(Icons.person),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-
-                  // Formulaire d'inscription
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        // Nom
-                        TextFormField(
-                          controller: _nomController,
-                          decoration: const InputDecoration(
-                            labelText: 'Nom',
-                            hintText: 'Entrez votre nom',
-                            prefixIcon: Icon(Icons.person),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: Validators.validateRequired,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Prénom
-                        TextFormField(
-                          controller: _prenomController,
-                          decoration: const InputDecoration(
-                            labelText: 'Prénom',
-                            hintText: 'Entrez votre prénom',
-                            prefixIcon: Icon(Icons.person_outline),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: Validators.validateRequired,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Email
-                        TextFormField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                            hintText: 'Entrez votre email',
-                            prefixIcon: Icon(Icons.email),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: Validators.validateEmail,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Téléphone
-                        TextFormField(
-                          controller: _telephoneController,
-                          keyboardType: TextInputType.phone,
-                          decoration: const InputDecoration(
-                            labelText: 'Téléphone',
-                            hintText: 'Entrez votre numéro de téléphone',
-                            prefixIcon: Icon(Icons.phone),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: Validators.validatePhone,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Mot de passe
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          decoration: InputDecoration(
-                            labelText: 'Mot de passe',
-                            hintText: 'Entrez votre mot de passe',
-                            prefixIcon: const Icon(Icons.lock),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                            ),
-                            border: const OutlineInputBorder(),
-                          ),
-                          validator: Validators.validatePassword,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Confirmation du mot de passe
-                        TextFormField(
-                          controller: _confirmPasswordController,
-                          obscureText: _obscureConfirmPassword,
-                          decoration: InputDecoration(
-                            labelText: 'Confirmer le mot de passe',
-                            hintText: 'Confirmez votre mot de passe',
-                            prefixIcon: const Icon(Icons.lock_outline),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureConfirmPassword
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscureConfirmPassword =
-                                      !_obscureConfirmPassword;
-                                });
-                              },
-                            ),
-                            border: const OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            return Validators.validateConfirmPassword(
-                              _passwordController.text,
-                              value,
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Bouton d'inscription
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed:
-                                authProvider.isLoading ? null : _register,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).primaryColor,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text(
-                              'S\'inscrire',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Connexion
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text('Déjà un compte ?'),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(
-                                  context,
-                                ).pushReplacementNamed(Routes.login);
-                              },
-                              child: const Text('Se connecter'),
-                            ),
-                          ],
-                        ),
-                      ],
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  validator: (val) => (val?.length ?? 0) < 2
+                      ? 'Le nom doit contenir au moins 2 caractères'
+                      : null,
+                  onChanged: (val) {
+                    setState(() => nom = val);
+                  },
+                ),
+                SizedBox(height: 20.0),
+                TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Prénom',
+                    prefixIcon: Icon(Icons.person),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  validator: (val) => (val?.length ?? 0) < 2
+                      ? 'Le prénom doit contenir au moins 2 caractères'
+                      : null,
+                  onChanged: (val) {
+                    setState(() => prenom = val);
+                  },
+                ),
+                SizedBox(height: 20.0),
+                TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Téléphone',
+                    prefixIcon: Icon(Icons.phone),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  keyboardType: TextInputType.phone,
+                  validator: (val) => (val?.length ?? 0) < 8
+                      ? 'Le numéro de téléphone doit contenir au moins 8 chiffres'
+                      : null,
+                  onChanged: (val) {
+                    setState(() => telephone = val);
+                  },
+                ),
+                SizedBox(height: 20.0),
+                TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: Icon(Icons.email),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (val) => !EmailValidator.validate(val ?? '')
+                      ? 'Entrez un email valide'
+                      : null,
+                  onChanged: (val) {
+                    setState(() => email = val);
+                  },
+                ),
+                SizedBox(height: 20.0),
+                TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Mot de passe',
+                    prefixIcon: Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscureTextPassword
+                          ? Icons.visibility
+                          : Icons.visibility_off),
+                      onPressed: () {
+                        setState(() {
+                          _obscureTextPassword = !_obscureTextPassword;
+                        });
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  obscureText: _obscureTextPassword,
+                  validator: (val) {
+                    if ((val?.length ?? 0) < 6) {
+                      return 'Le mot de passe doit contenir au moins 6 caractères';
+                    }
+                    // Vérifier si le mot de passe contient au moins un chiffre
+                    if (!RegExp(r'\d').hasMatch(val ?? '')) {
+                      return 'Le mot de passe doit contenir au moins un chiffre';
+                    }
+                    // Vérifier si le mot de passe contient au moins une lettre majuscule
+                    if (!RegExp(r'[A-Z]').hasMatch(val ?? '')) {
+                      return 'Le mot de passe doit contenir au moins une lettre majuscule';
+                    }
+                    return null;
+                  },
+                  onChanged: (val) {
+                    setState(() => password = val);
+                  },
+                ),
+                SizedBox(height: 20.0),
+                TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Confirmer le mot de passe',
+                    prefixIcon: Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscureTextConfirmPassword
+                          ? Icons.visibility
+                          : Icons.visibility_off),
+                      onPressed: () {
+                        setState(() {
+                          _obscureTextConfirmPassword =
+                              !_obscureTextConfirmPassword;
+                        });
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  obscureText: _obscureTextConfirmPassword,
+                  validator: (val) => val != password
+                      ? 'Les mots de passe ne correspondent pas'
+                      : null,
+                  onChanged: (val) {
+                    setState(() => confirmPassword = val);
+                  },
+                ),
+                SizedBox(height: 30.0),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                ],
-              ),
-            ),
+                  child: loading
+                      ? CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          'S\'inscrire',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                  onPressed: loading
+                      ? null
+                      : () async {
+                          if (_formKey.currentState?.validate() ?? false) {
+                            setState(() => loading = true);
 
-            // Indicateur de chargement
-            if (authProvider.isLoading) const LoadingOverlay(),
-          ],
+                            try {
+                              await authService.registerWithEmailAndPassword(
+                                email: email,
+                                password: password,
+                                nom: nom,
+                                prenom: prenom,
+                                telephone: telephone,
+                                // Les paramètres optionnels peuvent être omis ou fournis
+                                boutiqueName: 'Nom de la boutique', // Exemple
+                                marche: 'Nom du marché', // Exemple
+                                adresse: 'Adresse', // Exemple
+                              );
+                            } catch (e) {
+                              setState(() {
+                                if (e
+                                    .toString()
+                                    .contains('email-already-in-use')) {
+                                  error = 'Cet email est déjà utilisé';
+                                } else {
+                                  error =
+                                      'Échec d\'inscription. Veuillez réessayer.';
+                                }
+                              });
+                            } finally {
+                              setState(() => loading = false);
+                            }
+                          }
+                        },
+                ),
+                SizedBox(height: 12.0),
+                Text(
+                  error,
+                  style: TextStyle(color: Colors.red, fontSize: 14.0),
+                ),
+                SizedBox(height: 10.0),
+                TextButton(
+                  child: Text(
+                    'Mot de passe oublié?',
+                    style: TextStyle(
+                      color: Colors.blue[700],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => forgotPasswordScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
