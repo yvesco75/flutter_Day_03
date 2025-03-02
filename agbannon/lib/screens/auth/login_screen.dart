@@ -1,178 +1,277 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:email_validator/email_validator.dart';
-import '../../services/auth_service.dart';
-import 'forgot_password_screen.dart'; // Assurez-vous que le fichier est correctement importé
-import '../home/home_screen.dart'; // Importez votre écran d'accueil (HomeScreen)
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 
 class LoginScreen extends StatefulWidget {
   final Function toggleView;
 
-  LoginScreen({required this.toggleView});
+  const LoginScreen({Key? key, required this.toggleView}) : super(key: key);
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  String email = '';
-  String password = '';
-  String error = '';
-  bool loading = false;
-  bool _obscureText = true;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.2, 1.0, curve: Curves.easeInOut),
+      ),
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+        // Navigation vers l'écran d'accueil se fera automatiquement via un listener dans main.dart
+      } on FirebaseAuthException catch (e) {
+        String errorMessage = 'Une erreur est survenue. Veuillez réessayer.';
+
+        if (e.code == 'user-not-found') {
+          errorMessage = 'Aucun utilisateur trouvé avec cet email.';
+        } else if (e.code == 'wrong-password') {
+          errorMessage = 'Mot de passe incorrect.';
+        } else if (e.code == 'invalid-email') {
+          errorMessage = 'Format d\'email invalide.';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Une erreur est survenue. Veuillez réessayer.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final authService =
-        Provider.of<AuthService>(context); // Accès à AuthService
+    final size = MediaQuery.of(context).size;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Connexion'),
-        automaticallyImplyLeading: false, // Désactive la flèche de retour
-        actions: [
-          TextButton.icon(
-            icon: Icon(Icons.person,
-                color: const Color.fromARGB(255, 97, 13, 233)),
-            label: Text(
-              'S\'inscrire',
-              style: TextStyle(color: const Color.fromARGB(255, 97, 13, 233)),
-            ),
-            onPressed: () => widget.toggleView(),
-          ),
-        ],
-      ),
-      body: Container(
-        padding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 50.0),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(height: 20.0),
-                Image.asset(
-                  'images/chariot.jpg',
-                  height: 150,
-                  width: 200,
-                ),
-                SizedBox(height: 30.0),
-                TextFormField(
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                SizedBox(height: size.height * 0.05),
+                // Espace pour l'image
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Container(
+                    height: size.height * 0.25,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (val) => !EmailValidator.validate(val ?? '')
-                      ? 'Entrez un email valide'
-                      : null,
-                  onChanged: (val) {
-                    setState(() => email = val);
-                  },
-                ),
-                SizedBox(height: 20.0),
-                TextFormField(
-                  decoration: InputDecoration(
-                    labelText: 'Mot de passe',
-                    prefixIcon: Icon(Icons.lock),
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscureText
-                          ? Icons.visibility
-                          : Icons.visibility_off),
-                      onPressed: () {
-                        setState(() {
-                          _obscureText = !_obscureText;
-                        });
-                      },
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  obscureText: _obscureText,
-                  validator: (val) => (val?.length ?? 0) < 6
-                      ? 'Le mot de passe doit contenir au moins 6 caractères'
-                      : null,
-                  onChanged: (val) {
-                    setState(() => password = val);
-                  },
-                ),
-                SizedBox(height: 10.0),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    child: Text(
-                      'Mot de passe oublié?',
-                      style: TextStyle(
-                        color: Colors.blue[700],
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => forgotPasswordScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                SizedBox(height: 20.0),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                    child: Image.asset(
+                      'images/chariot.jpg', // Chemin de l'image dans le dossier `assets`
+                      fit: BoxFit
+                          .cover, // Ajuste l'image pour couvrir tout l'espace disponible
                     ),
                   ),
-                  child: loading
-                      ? CircularProgressIndicator(color: Colors.white)
-                      : Text(
-                          'Se connecter',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                  onPressed: loading
-                      ? null
-                      : () async {
-                          if (_formKey.currentState?.validate() ?? false) {
-                            setState(() => loading = true);
-
-                            try {
-                              await authService.signInWithEmailAndPassword(
-                                email: email,
-                                password: password,
-                              );
-
-                              // Redirection vers l'écran d'accueil après une connexion réussie
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => HomeScreen(),
-                                ),
-                              );
-                            } catch (e) {
-                              setState(() {
-                                error =
-                                    'Identifiants incorrects. Veuillez réessayer.';
-                              });
-                            } finally {
-                              setState(() => loading = false);
+                ),
+                SizedBox(height: size.height * 0.04),
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Text(
+                    'Connexion',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.primaryColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                SizedBox(height: size.height * 0.03),
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            labelText: 'Email',
+                            prefixIcon: const Icon(Icons.email_outlined),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Veuillez entrer votre email';
                             }
-                          }
-                        },
-                ),
-                SizedBox(height: 12.0),
-                Text(
-                  error,
-                  style: TextStyle(color: Colors.red, fontSize: 14.0),
+                            if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                                .hasMatch(value)) {
+                              return 'Veuillez entrer un email valide';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: TextFormField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          decoration: InputDecoration(
+                            labelText: 'Mot de passe',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Veuillez entrer votre mot de passe';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/forgot-password');
+                            },
+                            child: Text(
+                              'Mot de passe oublié?',
+                              style: TextStyle(
+                                color: theme.primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 24),
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _login,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.primaryColor,
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            minimumSize: const Size(double.infinity, 50),
+                          ),
+                          child: _isLoading
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white)
+                              : const Text(
+                                  'SE CONNECTER',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Pas encore de compte? ',
+                              style: TextStyle(color: Colors.grey[700]),
+                            ),
+                            TextButton(
+                              onPressed: () => widget.toggleView(),
+                              child: Text(
+                                'S\'inscrire',
+                                style: TextStyle(
+                                  color: theme.primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
