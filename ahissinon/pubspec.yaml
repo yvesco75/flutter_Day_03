@@ -62,6 +62,7 @@ flutter:
   assets:
      - asset/market.webp
      - asset/logoahissinon.png
+     - asset/tomate.jpg
 
   
 
