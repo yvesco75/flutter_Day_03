@@ -1,14 +1,31 @@
 import 'package:flutter/material.dart';
 
-class LoadingOverlay extends StatelessWidget {
-  const LoadingOverlay({Key? key}) : super(key: key);
+class LoadingWidget extends StatelessWidget {
+  final String? message;
+
+  const LoadingWidget({Key? key, this.message}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black54,
-      child: Center(child: CircularProgressIndicator()),
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(
+            color: Color.fromARGB(255, 97, 13, 233),
+          ),
+          if (message != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              message!,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
-

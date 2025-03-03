@@ -2,14 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../home/categories.dart'; // Importez votre écran de catégories ici
 
-class HomeWelcomeScreen extends StatefulWidget {
-  const HomeWelcomeScreen({Key? key}) : super(key: key);
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({Key? key}) : super(key: key);
 
   @override
-  _HomeWelcomeScreenState createState() => _HomeWelcomeScreenState();
+  _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeWelcomeScreenState extends State<HomeWelcomeScreen>
+class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeInAnimation;
@@ -23,7 +23,7 @@ class _HomeWelcomeScreenState extends State<HomeWelcomeScreen>
     // Configuration des animations
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),
+      duration: const Duration(seconds: 10),
     );
 
     // Animation d'apparition (0-2 secondes)
@@ -52,7 +52,7 @@ class _HomeWelcomeScreenState extends State<HomeWelcomeScreen>
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (ctx) =>
-                const CategoriesScreen(), // Utilisez votre écran de catégories
+                CategoriesScreen(), // Utilisez votre écran de catégories
           ),
         );
       },

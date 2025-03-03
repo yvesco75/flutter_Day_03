@@ -1,323 +1,423 @@
 import 'package:flutter/material.dart';
-
-class Category {
-  final String id;
-  final String name;
-  final String imageUrl;
-  final Color color;
-
-  Category({
-    required this.id,
-    required this.name,
-    required this.imageUrl,
-    required this.color,
-  });
-}
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../models/category.dart';
+import '../../screens/products/product_list_screen.dart'; // Assurez-vous d'importer correctement
+import '../../widgets/common/app_bar.dart';
+import '../../widgets/common/drawer.dart';
 
 class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({Key? key}) : super(key: key);
 
   @override
-  _CategoriesScreenState createState() => _CategoriesScreenState();
+  State<CategoriesScreen> createState() => _CategoriesScreenState();
 }
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
-  final List<Category> _categories = [
-    Category(
-      id: '1',
-      name: 'Vêtements',
-      imageUrl: 'assets/images/clothes.png',
-      color: Colors.purple.shade400,
-    ),
-    Category(
-      id: '2',
-      name: 'Électronique',
-      imageUrl: 'assets/images/electronics.png',
-      color: Colors.blue.shade400,
-    ),
-    Category(
-      id: '3',
-      name: 'Alimentation',
-      imageUrl: 'assets/images/food.png',
-      color: Colors.orange.shade400,
-    ),
-    Category(
-      id: '4',
-      name: 'Maison',
-      imageUrl: 'assets/images/home.png',
-      color: Colors.green.shade400,
-    ),
-    Category(
-      id: '5',
-      name: 'Beauté',
-      imageUrl: 'assets/images/beauty.png',
-      color: Colors.pink.shade400,
-    ),
-    Category(
-      id: '6',
-      name: 'Sports',
-      imageUrl: 'assets/images/sports.png',
-      color: Colors.red.shade400,
-    ),
-    Category(
-      id: '7',
-      name: 'Livres',
-      imageUrl: 'assets/images/books.png',
-      color: Colors.teal.shade400,
-    ),
-    Category(
-      id: '8',
-      name: 'Jouets',
-      imageUrl: 'assets/images/toys.png',
-      color: Colors.amber.shade400,
-    ),
-  ];
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  late Stream<QuerySnapshot> _categoriesStream;
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  String? _selectedCategoryId;
+  bool _isEditing = false;
 
-  bool _isSearching = false;
-  String _searchQuery = '';
-  final TextEditingController _searchController = TextEditingController();
+  // Nouvelle méthode pour naviguer vers la liste des produits
+  void _navigateToProductList(String categoryId, String categoryName) {
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => ProductListScreen(
+                categoryId: categoryId, categoryName: categoryName)));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _categoriesStream = _firestore.collection('categories').snapshots();
+  }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _nameController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
-  List<Category> get _filteredCategories {
-    if (_searchQuery.isEmpty) {
-      return _categories;
+  void _resetForm() {
+    setState(() {
+      _nameController.clear();
+      _descriptionController.clear();
+      _selectedCategoryId = null;
+      _isEditing = false;
+    });
+  }
+
+  Future<void> _saveCategory() async {
+    try {
+      if (_nameController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Veuillez entrer un nom de catégorie')),
+        );
+        return;
+      }
+
+      final categoryData = {
+        'name': _nameController.text.trim(),
+        'description': _descriptionController.text.trim(),
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      if (_isEditing && _selectedCategoryId != null) {
+        // Mise à jour
+        await _firestore
+            .collection('categories')
+            .doc(_selectedCategoryId)
+            .update(categoryData);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Catégorie mise à jour avec succès')),
+        );
+      } else {
+        // Création
+        await _firestore.collection('categories').add(categoryData);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Catégorie ajoutée avec succès')),
+        );
+      }
+
+      _resetForm();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: ${e.toString()}')),
+      );
     }
-    return _categories
-        .where((category) =>
-            category.name.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+  }
+
+  void _editCategory(Category category) {
+    setState(() {
+      _nameController.text = category.name;
+      _descriptionController.text = category.description ?? '';
+      _selectedCategoryId = category.id;
+      _isEditing = true;
+    });
+
+    // Faire défiler vers le formulaire
+    _showAddEditDialog(context);
+  }
+
+  Future<void> _deleteCategory(String categoryId) async {
+    try {
+      // Vérifier si la catégorie est utilisée par des produits
+      final productsQuery = await _firestore
+          .collection('products')
+          .where('categoryId', isEqualTo: categoryId)
+          .get();
+
+      if (productsQuery.docs.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Cette catégorie est utilisée par des produits et ne peut pas être supprimée'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      await _firestore.collection('categories').doc(categoryId).delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Catégorie supprimée avec succès')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _showAddEditDialog(BuildContext context) async {
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+              _isEditing ? 'Modifier la catégorie' : 'Ajouter une catégorie'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nom de la catégorie',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description (optionnelle)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _resetForm();
+              },
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _saveCategory();
+                Navigator.of(context).pop();
+              },
+              child: Text(_isEditing ? 'Mettre à jour' : 'Ajouter'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Rechercher une catégorie...',
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.white70),
+      appBar: const CustomAppBar(title: 'Catégories'),
+      drawer: const MyDrawer(),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Gestion des catégories',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
                 ),
-                style: TextStyle(color: Colors.white),
-                autofocus: true,
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                  });
-                },
-              )
-            : Text('Catégories'),
-        backgroundColor: const Color.fromARGB(255, 97, 13, 233),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search),
-            onPressed: () {
-              setState(() {
-                _isSearching = !_isSearching;
-                if (!_isSearching) {
-                  _searchQuery = '';
-                  _searchController.clear();
+                ElevatedButton.icon(
+                  onPressed: () => _showAddEditDialog(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Nouvelle'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _categoriesStream,
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text('Erreur: ${snapshot.error}'),
+                  );
                 }
-              });
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.notifications_outlined),
-            onPressed: () {
-              // Navigation vers les notifications
-            },
-          ),
-        ],
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color.fromARGB(255, 97, 13, 233).withOpacity(0.1),
-              Colors.white,
-            ],
-          ),
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                'Explorer les catégories',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ),
-            Expanded(
-              child: _filteredCategories.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Aucune catégorie trouvée',
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    )
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(16.0),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 1,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                      ),
-                      itemCount: _filteredCategories.length,
-                      itemBuilder: (ctx, index) {
-                        return CategoryItem(
-                          category: _filteredCategories[index],
-                        );
-                      },
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'Aucune catégorie trouvée.\nCliquez sur + pour en ajouter.',
+                      textAlign: TextAlign.center,
                     ),
+                  );
+                }
+
+                // Convertir les documents en objets Category
+                final categories = snapshot.data!.docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return Category(
+                    id: doc.id,
+                    name: data['name'] ?? '',
+                    description: data['description'],
+                  );
+                }).toList();
+
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 1.1,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                    ),
+                    itemCount: categories.length,
+                    itemBuilder: (ctx, index) {
+                      final category = categories[index];
+                      return _buildCategoryCard(category);
+                    },
+                  ),
+                );
+              },
             ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        selectedItemColor: const Color.fromARGB(255, 97, 13, 233),
-        unselectedItemColor: Colors.grey,
-        currentIndex: 1, // Index pour la page catégories
-        type: BottomNavigationBarType.fixed,
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: 'Accueil',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.category_outlined),
-            label: 'Catégories',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart_outlined),
-            label: 'Panier',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'Profil',
           ),
         ],
-        onTap: (index) {
-          // Navigation vers les différentes pages
-        },
       ),
     );
   }
-}
 
-class CategoryItem extends StatelessWidget {
-  final Category category;
+  Widget _buildCategoryCard(Category category) {
+    // Générer une couleur pastel aléatoire
+    final colors = [
+      Colors.blue.shade100,
+      Colors.green.shade100,
+      Colors.amber.shade100,
+      Colors.purple.shade100,
+      Colors.pink.shade100,
+      Colors.teal.shade100
+    ];
+    final colorIndex = category.name.hashCode % colors.length;
 
-  const CategoryItem({
-    Key? key,
-    required this.category,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        // Navigation vers la page de la catégorie
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (ctx) => CategoryDetailScreen(category: category),
-          ),
-        );
-      },
-      borderRadius: BorderRadius.circular(16),
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Container(
         decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
           gradient: LinearGradient(
-            colors: [
-              category.color.withOpacity(0.7),
-              category.color,
-            ],
+            colors: [colors[colorIndex], Colors.white],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: category.color.withOpacity(0.3),
-              blurRadius: 8,
-              offset: Offset(0, 3),
-            ),
-          ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
-                shape: BoxShape.circle,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(15.0),
-                child: Image.asset(
-                  category.imageUrl,
-                  fit: BoxFit.contain,
-                  errorBuilder: (ctx, error, _) {
-                    return Icon(
-                      Icons.category,
-                      size: 40,
-                      color: category.color,
-                    );
-                  },
+        child: InkWell(
+          onTap: () {
+            // Utiliser la nouvelle méthode de navigation
+            _navigateToProductList(category.id, category.name);
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        category.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          _editCategory(category);
+                        } else if (value == 'delete') {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Confirmer la suppression'),
+                              content: Text(
+                                  'Voulez-vous vraiment supprimer la catégorie "${category.name}" ?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(),
+                                  child: const Text('Annuler'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(ctx).pop();
+                                    _deleteCategory(category.id);
+                                  },
+                                  child: const Text(
+                                    'Supprimer',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, size: 18),
+                              SizedBox(width: 8),
+                              Text('Modifier'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, size: 18, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Supprimer',
+                                  style: TextStyle(color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
+                if (category.description != null &&
+                    category.description!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      category.description!,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                const Spacer(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        // Utiliser la nouvelle méthode de navigation
+                        _navigateToProductList(category.id, category.name);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                      child: const Text('Voir les produits'),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            SizedBox(height: 12),
-            Text(
-              category.name,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Page de détail d'une catégorie (squelette à compléter)
-class CategoryDetailScreen extends StatelessWidget {
-  final Category category;
-
-  const CategoryDetailScreen({Key? key, required this.category})
-      : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(category.name),
-        backgroundColor: category.color,
-      ),
-      body: Center(
-        child: Text(
-          'Liste des produits de la catégorie ${category.name} à venir',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 18),
+          ),
         ),
       ),
     );

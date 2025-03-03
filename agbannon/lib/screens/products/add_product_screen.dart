@@ -1,13 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart'; // Pour gérer les images
-import 'package:image_picker/image_picker.dart'; // Pour sélectionner une image
-import 'dart:io'; // Pour manipuler les fichiers image
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../widgets/product/product_form.dart';
+import '../../models/product.dart';
 
 class AddProductScreen extends StatefulWidget {
-  final String categoryId;
-
-  AddProductScreen({required this.categoryId});
+  const AddProductScreen({Key? key}) : super(key: key);
 
   @override
   _AddProductScreenState createState() => _AddProductScreenState();
@@ -15,153 +15,209 @@ class AddProductScreen extends StatefulWidget {
 
 class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _quantityController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-
-  File? _imageFile; // Pour stocker l'image sélectionnée
-  final ImagePicker _picker = ImagePicker();
+  final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _priceController = TextEditingController();
+  final _quantityController = TextEditingController();
+  String _selectedCategory = '';
+  File? _imageFile;
   bool _isLoading = false;
+  List<String> _categories = [];
 
-  Future<void> _pickImage() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories();
+  }
 
-    if (pickedFile != null) {
+  Future<void> _fetchCategories() async {
+    try {
+      final categoriesSnapshot =
+          await FirebaseFirestore.instance.collection('categories').get();
+
+      List<String> fetchedCategories = [];
+      for (var doc in categoriesSnapshot.docs) {
+        fetchedCategories.add(doc['name']);
+      }
+
       setState(() {
-        _imageFile = File(pickedFile.path);
+        _categories = fetchedCategories;
+
+        // Gestion du cas où aucune catégorie n'est disponible
+        if (_categories.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content:
+                  Text('Aucune catégorie disponible. Veuillez en créer une.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        } else {
+          _selectedCategory =
+              _categories[0]; // Sélectionnez la première catégorie par défaut
+        }
+      });
+
+      print('Catégories chargées: $_categories'); // Debug
+    } catch (error) {
+      print('Erreur lors de la récupération des catégories: $error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur de chargement des catégories: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _selectImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      setState(() {
+        _imageFile = File(image.path);
       });
     }
   }
 
-  Future<void> _addProduct() async {
-    if (_formKey.currentState!.validate()) {
+  Future<String?> _uploadImage() async {
+    if (_imageFile == null) return null;
+
+    try {
+      final fileName = 'product_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final Reference storageRef =
+          FirebaseStorage.instance.ref().child('products/$fileName');
+
+      final UploadTask uploadTask = storageRef.putFile(_imageFile!);
+      final TaskSnapshot taskSnapshot = await uploadTask;
+
+      return await taskSnapshot.ref.getDownloadURL();
+    } catch (error) {
+      print('Erreur lors de l\'upload de l\'image: $error');
+      return null;
+    }
+  }
+
+  Future<void> _saveProduct() async {
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Veuillez corriger les erreurs dans le formulaire.')),
+      );
+      return;
+    }
+
+    if (_selectedCategory.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez sélectionner une catégorie')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      String? imageUrl = await _uploadImage();
+
+      // Extraire les données des contrôleurs
+      String name = _nameController.text.trim();
+      String description = _descriptionController.text.trim();
+      double price = double.parse(_priceController.text.replaceAll(',', '.'));
+      int quantity = int.parse(_quantityController.text);
+
+      print('Produit sauvegardé :');
+      print('Nom : $name');
+      print('Description : $description');
+      print('Prix : $price');
+      print('Quantité : $quantity');
+      print('Catégorie : $_selectedCategory');
+      print('Fichier image : ${_imageFile?.path}');
+
+      final newProduct = {
+        'name': name,
+        'description': description,
+        'price': price,
+        'quantity': quantity,
+        'category': _selectedCategory,
+        'imageUrl': imageUrl ?? '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      await FirebaseFirestore.instance.collection('products').add(newProduct);
+
       setState(() {
-        _isLoading = true;
+        _isLoading = false;
       });
 
-      try {
-        // Enregistrer l'image dans Firebase Storage (si une image est sélectionnée)
-        String? imageUrl;
-        if (_imageFile != null) {
-          final storageRef = FirebaseStorage.instance
-              .ref()
-              .child('product_images/${DateTime.now().toString()}');
-          await storageRef.putFile(_imageFile!);
-          imageUrl = await storageRef.getDownloadURL();
-        }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Produit ajouté avec succès')),
+      );
 
-        // Enregistrer le produit dans Firestore
-        await FirebaseFirestore.instance.collection('products').add({
-          'name': _nameController.text,
-          'price': double.parse(_priceController.text),
-          'quantity': int.parse(_quantityController.text),
-          'description': _descriptionController.text,
-          'imageUrl': imageUrl,
-          'categoryId': widget.categoryId,
-          'createdAt': Timestamp.now(),
-        });
+      Navigator.of(context).pop();
+    } catch (error) {
+      setState(() {
+        _isLoading = false;
+      });
 
-        // Retourner à l'écran précédent après l'ajout
-        Navigator.pop(context);
-      } catch (e) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de l\'ajout du produit: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $error')),
+      );
     }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _priceController.dispose();
+    _quantityController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Ajouter un produit'),
+        title: const Text('Ajouter un produit'),
+        backgroundColor: Colors.blueAccent, // Couleur de l'appBar
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                if (_imageFile != null)
-                  Image.file(
-                    _imageFile!,
-                    height: 150,
-                    width: 150,
-                    fit: BoxFit.cover,
-                  )
-                else
-                  Icon(Icons.image, size: 150),
-                SizedBox(height: 16.0),
-                ElevatedButton(
-                  onPressed: _pickImage,
-                  child: Text('Choisir une image'),
-                ),
-                SizedBox(height: 16.0),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: InputDecoration(labelText: 'Nom du produit'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer un nom';
-                    }
-                    return null;
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    Colors.blueAccent), // Couleur du loader
+              ),
+            )
+          : SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ProductForm(
+                  formKey: _formKey,
+                  nameController: _nameController,
+                  descriptionController: _descriptionController,
+                  priceController: _priceController,
+                  quantityController: _quantityController,
+                  selectedCategory: _selectedCategory,
+                  categories: _categories,
+                  imageFile: _imageFile,
+                  onCategoryChanged: (value) {
+                    setState(() {
+                      _selectedCategory =
+                          value; // Mettre à jour la catégorie sélectionnée
+                    });
                   },
+                  onSelectImage: _selectImage,
+                  onSubmit: _saveProduct,
+                  submitButtonText: 'Ajouter',
+                  submitButtonColor:
+                      Colors.blueAccent, // Couleur du bouton d'ajout
                 ),
-                SizedBox(height: 16.0),
-                TextFormField(
-                  controller: _priceController,
-                  decoration: InputDecoration(labelText: 'Prix (FCFA)'),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer un prix';
-                    }
-                    if (double.tryParse(value) == null) {
-                      return 'Veuillez entrer un nombre valide';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 16.0),
-                TextFormField(
-                  controller: _quantityController,
-                  decoration: InputDecoration(labelText: 'Quantité disponible'),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer une quantité';
-                    }
-                    if (int.tryParse(value) == null) {
-                      return 'Veuillez entrer un nombre valide';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 16.0),
-                TextFormField(
-                  controller: _descriptionController,
-                  decoration:
-                      InputDecoration(labelText: 'Description (optionnel)'),
-                  maxLines: 3,
-                ),
-                SizedBox(height: 32.0),
-                _isLoading
-                    ? CircularProgressIndicator()
-                    : ElevatedButton(
-                        onPressed: _addProduct,
-                        child: Text('Ajouter le produit'),
-                      ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }
