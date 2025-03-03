@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'profil_page.dart';
+import 'porte_feuille_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -76,11 +78,14 @@ class _HomePageState extends State<HomePage> {
                         width: 80,
                       ),
                       IconButton(
-                        icon: const Icon(Icons.account_circle, size: 32, color: Colors.black),
-                        onPressed: () {
-                          debugPrint("Profil ouvert");
-                        },
-                      ),
+  icon: const Icon(Icons.account_circle, size: 32, color: Colors.black),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ProfilPage()), // Naviguez vers la page de profil
+    );
+  },
+),
                     ],
                   ),
                 ),
@@ -200,12 +205,20 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
+bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
           BottomNavigationBarItem(icon: Icon(Icons.wallet), label: 'Portefeuille'),
           BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Panier'),
         ],
+        onTap: (index) {
+          if (index == 1) { // Vérifiez si l'élément cliqué est celui du portefeuille
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => PortefeuillePage()), // Naviguez vers la page de portefeuille
+            );
+          }
+        },
       ),
     );
   }
