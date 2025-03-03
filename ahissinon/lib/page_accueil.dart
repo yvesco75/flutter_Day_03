@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'profil_page.dart';
 import 'porte_feuille_page.dart';
+import 'panier_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,22 +15,22 @@ class _HomePageState extends State<HomePage> {
     {"name": "Tomate", "image": "asset/tomate.jpg", "price": 2.5, "unit": "kg"},
     {"name": "Pomme", "image": "asset/pomme.jpg", "price": 1.8, "unit": "kg"},
     {"name": "Carotte", "image": "asset/carotte.jpg", "price": 1.2, "unit": "kg"},
-    {"name": "Banane", "image": "asset/banane.jpg", "price": 2.0, "unit": "kg"},
+    {"name": "Banane", "image": "asset/banane.webp", "price": 2.0, "unit": "kg"},
     {"name": "Poisson", "image": "asset/poisson.jpg", "price": 8.0, "unit": "kg"},
-    {"name": "Lait", "image": "asset/lait.jpg", "price": 1.5, "unit": "L"},
-    {"name": "Riz", "image": "asset/riz.jpg", "price": 3.0, "unit": "kg"},
+    {"name": "Lait", "image": "asset/lait.webp", "price": 1.5, "unit": "L"},
+    {"name": "Riz", "image": "asset/riz.webp", "price": 3.0, "unit": "kg"},
     {"name": "Poulet", "image": "asset/poulet.jpg", "price": 6.5, "unit": "kg"},
     {"name": "Oeuf", "image": "asset/oeuf.jpg", "price": 2.2, "unit": "12"},
-    {"name": "Huile", "image": "asset/huile.jpg", "price": 4.0, "unit": "L"},
-    {"name": "Sucre", "image": "asset/sucre.jpg", "price": 1.0, "unit": "kg"},
+    {"name": "Huile", "image": "asset/huile.webp", "price": 4.0, "unit": "L"},
+    {"name": "Sucre", "image": "asset/sucre.avif", "price": 1.0, "unit": "kg"},
     {"name": "Sel", "image": "asset/sel.jpg", "price": 0.5, "unit": "kg"},
-    {"name": "Poivre", "image": "asset/poivre.jpg", "price": 1.8, "unit": "kg"},
+    {"name": "Poivre", "image": "asset/poivre2.jpg", "price": 1.8, "unit": "kg"},
     {"name": "Café", "image": "asset/cafe.jpg", "price": 5.0, "unit": "kg"},
-    {"name": "Thé", "image": "asset/the.jpg", "price": 3.5, "unit": "kg"},
-    {"name": "Jus", "image": "asset/jus.jpg", "price": 2.8, "unit": "L"},
+    {"name": "Thé", "image": "asset/the.png", "price": 3.5, "unit": "kg"},
+    {"name": "Jus", "image": "asset/jus.png", "price": 2.8, "unit": "L"},
     {"name": "Eau", "image": "asset/eau.jpg", "price": 0.8, "unit": "L"},
-    {"name": "Pain", "image": "asset/pain.jpg", "price": 1.2, "unit": "pièce"},
-    {"name": "Farine", "image": "asset/farine.jpg", "price": 2.0, "unit": "kg"},
+    {"name": "Pain", "image": "asset/pain.jfif", "price": 1.2, "unit": "pièce"},
+    {"name": "Farine", "image": "asset/farine.jfif", "price": 2.0, "unit": "kg"},
     {"name": "Pâtes", "image": "asset/pates.jpg", "price": 1.5, "unit": "kg"},
   ];
 
@@ -43,6 +44,9 @@ class _HomePageState extends State<HomePage> {
   ];
 
   int _selectedCategory = 0;
+  int _selectedIndex = 0; // Ajout de cette variable pour la gestion de la navigation
+  final List<Map<String, dynamic>> _cartItems = []; // Liste du panier
+// Liste du panier
 
   @override
   Widget build(BuildContext context) {
@@ -78,14 +82,14 @@ class _HomePageState extends State<HomePage> {
                         width: 80,
                       ),
                       IconButton(
-  icon: const Icon(Icons.account_circle, size: 32, color: Colors.black),
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => ProfilPage()), // Naviguez vers la page de profil
-    );
-  },
-),
+                        icon: const Icon(Icons.account_circle, size: 32, color: Colors.black),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => ProfilPage()), // Naviguez vers la page de profil
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -175,7 +179,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                               Text(
                                 "${product["price"]} €/${product["unit"]}",
-                                style: TextStyle(fontSize: 12),
+                                style: const TextStyle(fontSize: 12),
                               ),
                             ],
                           ),
@@ -190,7 +194,10 @@ class _HomePageState extends State<HomePage> {
                                 padding: EdgeInsets.symmetric(horizontal: 8),
                               ),
                               onPressed: () {
-                                debugPrint('Acheter ${product["name"]}');
+                                setState(() {
+                                  // Ajouter le produit au panier
+                                  _cartItems.add(product);
+                                });
                               },
                               child: const Text('Acheter'),
                             ),
@@ -205,17 +212,33 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
           BottomNavigationBarItem(icon: Icon(Icons.wallet), label: 'Portefeuille'),
           BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Panier'),
         ],
         onTap: (index) {
-          if (index == 1) { // Vérifiez si l'élément cliqué est celui du portefeuille
+          setState(() {
+            _selectedIndex = index;
+          });
+
+          if (index == 0) {
+            // Accueil, rien à faire
+          } else if (index == 1) {
+            // Portefeuille
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => PortefeuillePage()), // Naviguez vers la page de portefeuille
+              MaterialPageRoute(builder: (context) => PortefeuillePage()),
+            );
+          } else if (index == 2) {
+            // Panier
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PanierPage(cartItems: _cartItems),
+              ),
             );
           }
         },
