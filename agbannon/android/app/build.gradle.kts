@@ -45,3 +45,9 @@ android {
 flutter {
     source = "../.."
 }
+
+
+dependencies {
+    implementation("com.google.firebase:firebase-analytics")
+    // Autres dépendances Firebase si nécessaire
+}

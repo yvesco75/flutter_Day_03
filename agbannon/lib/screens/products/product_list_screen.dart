@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/product.dart';
-import '../../config/routes.dart';
-// Importez votre service de produits si nécessaire
-// import '../../services/product_service.dart';
+import 'package:go_router/go_router.dart';
 
 class ProductListScreen extends StatefulWidget {
   final String categoryId;
@@ -13,6 +12,18 @@ class ProductListScreen extends StatefulWidget {
     required this.categoryId,
     required this.categoryName,
   }) : super(key: key);
+
+  // Constructeur de fabrique pour la création à partir des paramètres de route Go Router
+  static ProductListScreen fromGoRouterState(GoRouterState state) {
+    final categoryId = state.pathParameters['categoryId'] ?? '';
+    final extra = state.extra as Map<String, dynamic>?;
+    final categoryName = extra?['categoryName'] as String? ?? 'Catégorie';
+
+    return ProductListScreen(
+      categoryId: categoryId,
+      categoryName: categoryName,
+    );
+  }
 
   @override
   State<ProductListScreen> createState() => _ProductListScreenState();
@@ -34,41 +45,42 @@ class _ProductListScreenState extends State<ProductListScreen> {
     });
 
     try {
-      // Remplacez ceci par votre propre logique pour charger les produits
-      // Exemple avec un service:
-      // final loadedProducts = await ProductService().getProductsByCategory(widget.categoryId);
+      // Charger les produits depuis Firestore pour la catégorie spécifique
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('products')
+          .where('categoryId', isEqualTo: widget.categoryId)
+          .orderBy('createdAt', descending: true)
+          .get();
 
-      // Pour l'exemple, je crée une liste factice
-      final loadedProducts = [
-        Product(
-          id: '1',
-          name: 'Produit 1 de ${widget.categoryName}',
-          description: 'Description du produit 1',
-          price: 199.99,
-          imageUrl: 'https://via.placeholder.com/150',
-          categoryId: widget.categoryId,
-        ),
-        Product(
-          id: '2',
-          name: 'Produit 2 de ${widget.categoryName}',
-          description: 'Description du produit 2',
-          price: 299.99,
-          imageUrl: 'https://via.placeholder.com/150',
-          categoryId: widget.categoryId,
-        ),
-        // Ajoutez plus de produits fictifs au besoin
-      ];
+      final loadedProducts = querySnapshot.docs.map((doc) {
+        return Product(
+          id: doc.id,
+          name: doc['name'],
+          description: doc['description'],
+          price: doc['price'].toDouble(),
+          imageUrl: doc['imageUrl'],
+          categoryId: doc['categoryId'],
+        );
+      }).toList();
 
-      setState(() {
-        products = loadedProducts;
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          products = loadedProducts;
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-      // Gérer l'erreur (afficher un message, etc.)
-      print('Erreur lors du chargement des produits: $e');
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors du chargement des produits: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -77,48 +89,90 @@ class _ProductListScreenState extends State<ProductListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.categoryName}'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: loadProducts,
+            tooltip: 'Actualiser',
+          ),
+        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : products.isEmpty
-              ? const Center(
-                  child: Text('Aucun produit trouvé dans cette catégorie'))
-              : ListView.builder(
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    return Card(
-                      margin: const EdgeInsets.all(8),
-                      child: ListTile(
-                        leading: Image.network(
-                          products[index].imageUrl,
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
-                          errorBuilder: (ctx, error, _) =>
-                              const Icon(Icons.image_not_supported, size: 50),
-                        ),
-                        title: Text(products[index].name),
-                        subtitle: Text(
-                            '\$${products[index].price.toStringAsFixed(2)}'),
-                        trailing: const Icon(Icons.arrow_forward_ios),
-                        onTap: () {
-                          // Naviguer vers les détails du produit
-                          Routes.navigatePushWithArgs(
-                            context,
-                            Routes.productDetail,
-                            products[index],
-                          );
-                        },
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Aucun produit trouvé dans cette catégorie'),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () => context.goNamed('add-product'),
+                        child: const Text('Ajouter un produit'),
                       ),
-                    );
-                  },
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: loadProducts,
+                  child: ListView.builder(
+                    itemCount: products.length,
+                    itemBuilder: (context, index) {
+                      final product = products[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        elevation: 3,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(10),
+                          leading: Hero(
+                            tag: 'product_image_${product.id}',
+                            child: CircleAvatar(
+                              radius: 30,
+                              backgroundImage: NetworkImage(product.imageUrl),
+                              onBackgroundImageError: (_, __) =>
+                                  const Icon(Icons.image_not_supported),
+                            ),
+                          ),
+                          title: Text(
+                            product.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                product.description,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                '\$${product.price.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  color: Colors.green[700],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          trailing:
+                              const Icon(Icons.arrow_forward_ios, size: 20),
+                          onTap: () {
+                            // Navigation vers les détails du produit avec go_router
+                            context.goNamed('edit-product', extra: product);
+                          },
+                        ),
+                      );
+                    },
+                  ),
                 ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Routes.navigatePush(context, Routes.addProduct);
+          context.goNamed('add-product');
         },
-        child: const Icon(Icons.add),
         tooltip: 'Ajouter un produit',
+        child: const Icon(Icons.add),
       ),
     );
   }

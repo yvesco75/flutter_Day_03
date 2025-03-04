@@ -83,4 +83,5 @@ class DefaultFirebaseOptions {
     authDomain: 'dclic-market-93bdb.firebaseapp.com',
     storageBucket: 'dclic-market-93bdb.firebasestorage.app',
   );
+
 }

@@ -50,6 +50,9 @@ dependencies:
   flutter_slidable: ^3.0.0
   fl_chart: ^0.63.0
   carousel_slider: ^5.0.0
+  google_sign_in: ^6.1.0
+  flutter_secure_storage: ^8.0.0
+  go_router: ^14.8.1
 
 dev_dependencies:
   flutter_test:

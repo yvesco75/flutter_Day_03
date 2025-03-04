@@ -1,132 +1,144 @@
 import 'package:flutter/material.dart';
-import '../screens/home/home_screen.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+// Importations de vos écrans
+import '../providers/auth_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/forgot_password_screen.dart';
+import '../screens/home/home_screen.dart';
 import '../screens/home/categories.dart';
-import '../screens/products/add_product_screen.dart'; // Importez AddProductScreen
-import '../screens/products/edit_product_screen.dart'; // Importez EditProductScreen
-import '../models/product.dart'; // Importez Product
+import '../screens/products/product_list_screen.dart';
+import '../screens/products/add_product_screen.dart';
+import '../screens/products/edit_product_screen.dart';
+import '../models/product.dart';
 
-class Routes {
-  // Définition de toutes les constantes de routes
-  static const String home = '/';
-  static const String login = '/login';
-  static const String register = '/register';
-  static const String forgotPassword = '/forgot-password';
-  static const String categories = '/categories';
-  static const String productList = '/product-list';
-  static const String productDetail = '/product-detail';
-  static const String addProduct = '/add-product';
-  static const String editProduct = '/edit-product';
-  static const String orderList = '/order-list';
-  static const String orderDetail = '/order-detail';
-  static const String offerList = '/offer-list';
-  static const String createOffer = '/create-offer';
-  static const String profile = '/profile';
+class AppRouter {
+  static final GoRouter router = GoRouter(
+    // Redirection globale basée sur l'authentification
+    redirect: (BuildContext context, GoRouterState state) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final bool isAuthenticated = authProvider.isAuthenticated;
+      final bool isLoading = authProvider.isLoading;
 
-  // Map de routes statiques pour MaterialApp
-  static Map<String, WidgetBuilder> getRoutes() {
-    return {
-      home: (context) => const HomeScreen(),
-      login: (context) => LoginScreen(
-            toggleView: () => navigateTo(context, register),
+      // Routes publiques
+      final bool isPublicRoute = ['/login', '/register', '/forgot-password']
+          .contains(state.uri.toString());
+
+      // Si pas authentifié et pas sur une route publique, rediriger vers login
+      if (isLoading) {
+        return null; // Attendre le chargement
+      }
+
+      if (!isAuthenticated && !isPublicRoute) {
+        return '/login';
+      }
+
+      // Si authentifié et sur une route publique, rediriger vers home
+      if (isAuthenticated && isPublicRoute) {
+        return '/';
+      }
+
+      return null;
+    },
+
+    // Configuration des routes
+    routes: [
+      // Route de connexion
+      GoRoute(
+        path: '/login',
+        name: 'login',
+        builder: (context, state) => LoginScreen(
+          toggleView: () => context.go('/register'),
+        ),
+      ),
+
+      // Route d'inscription
+      GoRoute(
+        path: '/register',
+        name: 'register',
+        builder: (context, state) => RegisterScreen(
+          toggleView: () => context.go('/login'),
+        ),
+      ),
+
+      // Route de réinitialisation de mot de passe
+      GoRoute(
+        path: '/forgot-password',
+        name: 'forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+
+      // Route principale (home)
+      GoRoute(
+        path: '/',
+        name: 'home',
+        builder: (context, state) => const HomeScreen(),
+        routes: [
+          // Routes imbriquées sous home
+          GoRoute(
+            path: 'categories',
+            name: 'categories',
+            builder: (context, state) => const CategoriesScreen(),
           ),
-      register: (context) => RegisterScreen(
-            toggleView: () => navigateTo(context, login),
+          // Nouvelle route pour afficher les produits d'une catégorie
+          GoRoute(
+            path: 'products/:categoryId',
+            name: 'products',
+            builder: (context, state) =>
+                ProductListScreen.fromGoRouterState(state),
           ),
-      forgotPassword: (context) => const ForgotPasswordScreen(),
-      categories: (context) => const CategoriesScreen(),
-      addProduct: (context) =>
-          const AddProductScreen(), // Route pour ajouter un produit
-      // editProduct n'est pas inclus ici car il nécessite un argument (Product)
-    };
-  }
-
-  // Générateur de routes
-  static Route<dynamic> generateRoute(RouteSettings settings) {
-    final args = settings.arguments;
-
-    switch (settings.name) {
-      case home:
-        return MaterialPageRoute(builder: (_) => const HomeScreen());
-
-      case login:
-        return MaterialPageRoute(
-          builder: (_) => LoginScreen(
-            toggleView: () => navigateTo(_, register),
+          // Route pour ajouter un produit (déplacée dans les routes imbriquées)
+          GoRoute(
+            path: 'add-product',
+            name: 'add-product',
+            builder: (context, state) => const AddProductScreen(),
           ),
-        );
-
-      case register:
-        return MaterialPageRoute(
-          builder: (_) => RegisterScreen(
-            toggleView: () => navigateTo(_, login),
+          // Route pour éditer un produit (déplacée dans les routes imbriquées)
+          GoRoute(
+            path: '/edit-product',
+            name: 'edit-product',
+            builder: (context, state) {
+              final product = state.extra as Product?;
+              if (product == null) {
+                return Scaffold(
+                  body: Center(
+                    child: Text('Produit non spécifié'),
+                  ),
+                );
+              }
+              return EditProductScreen(product: product);
+            },
           ),
-        );
+        ],
+      ),
+    ],
 
-      case forgotPassword:
-        return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
+    // Gestionnaire d'erreurs
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(
+        child: Text('Route non trouvée: ${state.error}'),
+      ),
+    ),
+  );
 
-      case categories:
-        return MaterialPageRoute(builder: (_) => const CategoriesScreen());
-
-      case addProduct:
-        return MaterialPageRoute(
-            builder: (_) =>
-                const AddProductScreen()); // Route pour ajouter un produit
-
-      case editProduct:
-        if (args is Product) {
-          return MaterialPageRoute(
-            builder: (_) => EditProductScreen(
-                product: args), // Passez le produit à modifier
-          );
-        } else {
-          return MaterialPageRoute(
-            builder: (_) => Scaffold(
-              body: Center(
-                child: Text('Argument invalide pour la route edit-product'),
-              ),
-            ),
-          );
-        }
-
-      default:
-        return MaterialPageRoute(
-          builder: (_) => Scaffold(
-            body: Center(
-              child: Text('Aucune route définie pour ${settings.name}'),
-            ),
-          ),
-        );
-    }
-  }
-
-  // Fonctions helper pour la navigation
-  static void navigateTo(BuildContext context, String routeName) {
-    Navigator.pushReplacementNamed(context, routeName);
+  // Méthodes de navigation statiques
+  static void navigateTo(BuildContext context, String route) {
+    context.go(route);
   }
 
   static void navigateToWithArgs(
-      BuildContext context, String routeName, Object arguments) {
-    Navigator.pushReplacementNamed(
-      context,
-      routeName,
-      arguments: arguments,
-    );
+      BuildContext context, String route, Object? extra) {
+    context.go(route, extra: extra);
   }
 
-  static void navigatePush(BuildContext context, String routeName) {
-    Navigator.pushNamed(context, routeName);
+  static void pushTo(BuildContext context, String route) {
+    context.push(route);
   }
 
-  static void navigatePushWithArgs(
-      BuildContext context, String routeName, Object arguments) {
-    Navigator.pushNamed(
-      context,
-      routeName,
-      arguments: arguments,
-    );
+  static void pushToWithArgs(
+      BuildContext context, String route, Object? extra) {
+    context.push(route, extra: extra);
   }
 }

@@ -11,6 +11,7 @@ class Marchand {
   final String? marche;
   final String? adresse;
   final String role = 'marchand'; // Rôle par défaut
+  final DateTime? createdAt; // Ajout optionnel de la date de création
 
   Marchand({
     required this.id,
@@ -22,6 +23,7 @@ class Marchand {
     this.boutiqueName,
     this.marche,
     this.adresse,
+    this.createdAt,
   });
 
   // Conversion de Map à Marchand (pour récupérer les données de Firestore)
@@ -36,6 +38,8 @@ class Marchand {
       boutiqueName: map['boutiqueName'],
       marche: map['marche'],
       adresse: map['adresse'],
+      createdAt:
+          map['createdAt'] != null ? DateTime.parse(map['createdAt']) : null,
     );
   }
 
@@ -51,7 +55,7 @@ class Marchand {
       'marche': marche,
       'adresse': adresse,
       'role': role,
-      'createdAt': DateTime.now().toIso8601String(),
+      'createdAt': (createdAt ?? DateTime.now()).toIso8601String(),
     };
   }
 
@@ -65,6 +69,7 @@ class Marchand {
     String? boutiqueName,
     String? marche,
     String? adresse,
+    DateTime? createdAt,
   }) {
     return Marchand(
       id: this.id,
@@ -76,6 +81,10 @@ class Marchand {
       boutiqueName: boutiqueName ?? this.boutiqueName,
       marche: marche ?? this.marche,
       adresse: adresse ?? this.adresse,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
+
+  // Méthode pour formater le nom complet
+  String get fullName => '$prenom $nom';
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../config/routes.dart'; // Assurez-vous d'importer votre fichier Routes
+import 'package:go_router/go_router.dart'; // Import go_router
+// Assurez-vous d'importer votre fichier Routes - plus nécessaire ici
+//import '../../config/routes.dart';
 
 class MyDrawer extends StatelessWidget {
   final String username;
@@ -34,7 +36,7 @@ class MyDrawer extends StatelessWidget {
             title: const Text('Accueil'),
             onTap: () {
               Navigator.pop(context);
-              Routes.navigateTo(context, Routes.home);
+              GoRouter.of(context).go('/'); // Navigate to home
             },
           ),
           ListTile(
@@ -42,8 +44,8 @@ class MyDrawer extends StatelessWidget {
             title: const Text('Voir les produits'),
             onTap: () {
               Navigator.pop(context); // Ferme le drawer
-              Routes.navigatePush(context,
-                  Routes.addProduct); // Utilise votre méthode navigatePush
+              GoRouter.of(context)
+                  .push('/add-product'); // Navigate to add product
             },
           ),
           ListTile(
@@ -51,7 +53,8 @@ class MyDrawer extends StatelessWidget {
             title: const Text('Catégories'),
             onTap: () {
               Navigator.pop(context);
-              Routes.navigatePush(context, Routes.categories);
+              GoRouter.of(context)
+                  .push('/categories'); // Navigate to categories
             },
           ),
           ListTile(
@@ -60,6 +63,7 @@ class MyDrawer extends StatelessWidget {
             onTap: () {
               Navigator.pop(context);
               // Ajouter une route pour les paramètres si nécessaire
+              // Example: GoRouter.of(context).push('/settings');
             },
           ),
           const Divider(),
@@ -83,6 +87,7 @@ class MyDrawer extends StatelessWidget {
             onTap: () {
               Navigator.pop(context);
               // Ajouter une route pour les notifications si nécessaire
+              // Example: GoRouter.of(context).push('/notifications');
             },
           ),
           ListTile(
@@ -90,7 +95,7 @@ class MyDrawer extends StatelessWidget {
             title: const Text('Profil'),
             onTap: () {
               Navigator.pop(context);
-              Routes.navigatePush(context, Routes.profile);
+              // Example: GoRouter.of(context).push('/profile');
             },
           ),
           ListTile(
@@ -100,7 +105,7 @@ class MyDrawer extends StatelessWidget {
               Navigator.pop(context);
               // Ajouter la logique de déconnexion
               // Puis naviguer vers l'écran de connexion
-              // Routes.navigateTo(context, Routes.login);
+              GoRouter.of(context).go('/login');
             },
           ),
         ],

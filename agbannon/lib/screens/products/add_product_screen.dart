@@ -1,9 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import '../../widgets/product/product_form.dart';
+import 'package:go_router/go_router.dart'; // Import Go Router
+import '../../config/routes.dart';
 import '../../models/product.dart';
 
 class AddProductScreen extends StatefulWidget {
@@ -18,11 +19,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-  final _quantityController = TextEditingController();
-  String _selectedCategory = '';
+
+  String? _selectedCategoryId;
   File? _imageFile;
   bool _isLoading = false;
-  List<String> _categories = [];
+
+  // Liste des catégories (à récupérer de Firestore)
+  List<Map<String, String>> _categories = [];
 
   @override
   void initState() {
@@ -32,85 +35,65 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   Future<void> _fetchCategories() async {
     try {
-      final categoriesSnapshot =
+      final querySnapshot =
           await FirebaseFirestore.instance.collection('categories').get();
 
-      List<String> fetchedCategories = [];
-      for (var doc in categoriesSnapshot.docs) {
-        fetchedCategories.add(doc['name']);
+      setState(() {
+        _categories = querySnapshot.docs.map((DocumentSnapshot doc) {
+          return {'id': doc.id, 'name': doc['name'] as String};
+        }).toList();
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur de chargement des catégories: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
-
-      setState(() {
-        _categories = fetchedCategories;
-
-        // Gestion du cas où aucune catégorie n'est disponible
-        if (_categories.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content:
-                  Text('Aucune catégorie disponible. Veuillez en créer une.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        } else {
-          _selectedCategory =
-              _categories[0]; // Sélectionnez la première catégorie par défaut
-        }
-      });
-
-      print('Catégories chargées: $_categories'); // Debug
-    } catch (error) {
-      print('Erreur lors de la récupération des catégories: $error');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur de chargement des catégories: $error'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
-  Future<void> _selectImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-
-    if (image != null) {
+  Future<void> _pickImage() async {
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
       setState(() {
-        _imageFile = File(image.path);
+        _imageFile = File(pickedFile.path);
       });
     }
   }
 
-  Future<String?> _uploadImage() async {
-    if (_imageFile == null) return null;
+  Future<String> _uploadImage() async {
+    if (_imageFile == null) {
+      return ''; // URL d'image par défaut si aucune image n'est sélectionnée
+    }
 
     try {
-      final fileName = 'product_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final Reference storageRef =
-          FirebaseStorage.instance.ref().child('products/$fileName');
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('product_images')
+          .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
 
-      final UploadTask uploadTask = storageRef.putFile(_imageFile!);
-      final TaskSnapshot taskSnapshot = await uploadTask;
-
-      return await taskSnapshot.ref.getDownloadURL();
-    } catch (error) {
-      print('Erreur lors de l\'upload de l\'image: $error');
-      return null;
+      await storageRef.putFile(_imageFile!);
+      return await storageRef.getDownloadURL();
+    } catch (e) {
+      print('Erreur de téléchargement de l\'image: $e');
+      return '';
     }
   }
 
-  Future<void> _saveProduct() async {
-    if (!_formKey.currentState!.validate()) {
+  Future<void> _addProduct() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    // Vérifier qu'une catégorie est sélectionnée
+    if (_selectedCategoryId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Veuillez corriger les erreurs dans le formulaire.')),
-      );
-      return;
-    }
-
-    if (_selectedCategory.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez sélectionner une catégorie')),
+          content: Text('Veuillez sélectionner une catégorie'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -120,62 +103,59 @@ class _AddProductScreenState extends State<AddProductScreen> {
     });
 
     try {
-      String? imageUrl = await _uploadImage();
+      // Télécharger l'image
+      final imageUrl = await _uploadImage();
 
-      // Extraire les données des contrôleurs
-      String name = _nameController.text.trim();
-      String description = _descriptionController.text.trim();
-      double price = double.parse(_priceController.text.replaceAll(',', '.'));
-      int quantity = int.parse(_quantityController.text);
-
-      print('Produit sauvegardé :');
-      print('Nom : $name');
-      print('Description : $description');
-      print('Prix : $price');
-      print('Quantité : $quantity');
-      print('Catégorie : $_selectedCategory');
-      print('Fichier image : ${_imageFile?.path}');
-
-      final newProduct = {
-        'name': name,
-        'description': description,
-        'price': price,
-        'quantity': quantity,
-        'category': _selectedCategory,
-        'imageUrl': imageUrl ?? '',
+      // Créer le produit dans Firestore
+      final productRef =
+          await FirebaseFirestore.instance.collection('products').add({
+        'name': _nameController.text.trim(),
+        'description': _descriptionController.text.trim(),
+        'price': double.parse(_priceController.text.trim()),
+        'categoryId': _selectedCategoryId,
+        'imageUrl': imageUrl,
         'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-
-      await FirebaseFirestore.instance.collection('products').add(newProduct);
-
-      setState(() {
-        _isLoading = false;
       });
 
+      // Vérifier que le widget est toujours monté avant d'utiliser le contexte
+      if (!mounted) return;
+
+      // Obtenir le nom de la catégorie
+      String categoryName = _categories.firstWhere(
+          (cat) => cat['id'] == _selectedCategoryId,
+          orElse: () => {'id': '', 'name': 'Inconnu'})['name']!;
+
+      // Afficher un message de succès
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Produit ajouté avec succès')),
+        const SnackBar(
+          content: Text('Produit ajouté avec succès'),
+          backgroundColor: Colors.green,
+        ),
       );
 
-      Navigator.of(context).pop();
-    } catch (error) {
-      setState(() {
-        _isLoading = false;
-      });
+      // Utiliser GoRouter pour naviguer vers la liste des produits
+      context.goNamed(
+        'products',
+        pathParameters: {'categoryId': _selectedCategoryId!},
+        extra: {'categoryName': categoryName},
+      );
+    } catch (e) {
+      // Vérifier que le widget est toujours monté avant d'utiliser le contexte
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: $error')),
+        SnackBar(
+          content: Text('Erreur lors de l\'ajout du produit: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _descriptionController.dispose();
-    _priceController.dispose();
-    _quantityController.dispose();
-    super.dispose();
   }
 
   @override
@@ -183,41 +163,132 @@ class _AddProductScreenState extends State<AddProductScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Ajouter un produit'),
-        backgroundColor: Colors.blueAccent, // Couleur de l'appBar
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                    Colors.blueAccent), // Couleur du loader
-              ),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ProductForm(
-                  formKey: _formKey,
-                  nameController: _nameController,
-                  descriptionController: _descriptionController,
-                  priceController: _priceController,
-                  quantityController: _quantityController,
-                  selectedCategory: _selectedCategory,
-                  categories: _categories,
-                  imageFile: _imageFile,
-                  onCategoryChanged: (value) {
-                    setState(() {
-                      _selectedCategory =
-                          value; // Mettre à jour la catégorie sélectionnée
-                    });
-                  },
-                  onSelectImage: _selectImage,
-                  onSubmit: _saveProduct,
-                  submitButtonText: 'Ajouter',
-                  submitButtonColor:
-                      Colors.blueAccent, // Couleur du bouton d'ajout
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Sélection d'image
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        height: 200,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: _imageFile != null
+                            ? Image.file(_imageFile!, fit: BoxFit.cover)
+                            : const Center(
+                                child: Text('Sélectionner une image')),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Champ de nom
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nom du produit',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Veuillez entrer un nom de produit';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Champ de description
+                    TextFormField(
+                      controller: _descriptionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Veuillez entrer une description';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Champ de prix
+                    TextFormField(
+                      controller: _priceController,
+                      decoration: const InputDecoration(
+                        labelText: 'Prix',
+                        border: OutlineInputBorder(),
+                        prefixText: '\$ ',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Veuillez entrer un prix';
+                        }
+                        if (double.tryParse(value) == null) {
+                          return 'Veuillez entrer un prix valide';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Sélection de catégorie
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                        labelText: 'Catégorie',
+                        border: OutlineInputBorder(),
+                      ),
+                      value: _selectedCategoryId,
+                      hint: const Text('Sélectionner une catégorie'),
+                      items: _categories.map((category) {
+                        return DropdownMenuItem(
+                          value: category['id'],
+                          child: Text(category['name']!),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCategoryId = value;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Veuillez sélectionner une catégorie';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Bouton d'ajout
+                    ElevatedButton(
+                      onPressed: _addProduct,
+                      child: const Text('Ajouter le produit'),
+                    ),
+                  ],
                 ),
               ),
             ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _priceController.dispose();
+    super.dispose();
   }
 }

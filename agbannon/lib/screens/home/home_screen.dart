@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../home/categories.dart'; // Importez votre écran de catégories ici
+import 'package:go_router/go_router.dart'; // Import for Go Router
+import '../home/categories.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -45,16 +46,13 @@ class _HomeScreenState extends State<HomeScreen>
     // Démarrer l'animation
     _animationController.forward();
 
-    // Configurer le timer pour la redirection après 5 secondes
+    // Configurer le timer pour la redirection après 10 secondes
+    // (à la fin de l'animation complète)
     _redirectTimer = Timer(
-      const Duration(seconds: 5),
+      const Duration(seconds: 10),
       () {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (ctx) =>
-                CategoriesScreen(), // Utilisez votre écran de catégories
-          ),
-        );
+        // Utiliser Go Router pour la navigation
+        context.go('/categories'); // car categories est une sous-route de '/'
       },
     );
   }

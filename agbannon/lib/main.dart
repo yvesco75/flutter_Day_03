@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
-import 'package:agbannon/config/routes.dart';
 import 'package:agbannon/providers/auth_provider.dart';
-import 'package:agbannon/services/auth_service.dart';
 import 'package:agbannon/config/theme.dart'; // Importez le fichier theme.dart
+import 'package:go_router/go_router.dart'; // Import go_router
+
+import 'package:agbannon/screens/home/home_screen.dart';
+import 'package:agbannon/screens/home/categories.dart';
+import 'package:agbannon/screens/profile/profile_screen.dart';
+import '../../screens/products/add_product_screen.dart';
+import '../../screens/products/edit_product_screen.dart';
+import '../../models/product.dart';
 
 void main() async {
   // Initialisation de Flutter
@@ -31,16 +37,56 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
+  MyApp({Key? key}) : super(key: key);
+
+  final _router = GoRouter(
+    initialLocation: '/', // Route initiale
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) =>
+            const HomeScreen(), // Remplacez par votre écran d'accueil
+      ),
+      GoRoute(
+        path: '/categories',
+        builder: (context, state) =>
+            const CategoriesScreen(), // Remplacez par votre écran de catégories
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) =>
+            ProfilScreen(), // Remplacez par votre écran de profil
+      ),
+      // Ajoutez ici les routes que vous aviez dans AppRouter
+      GoRoute(
+        path: '/add-product',
+        builder: (context, state) => const AddProductScreen(),
+      ),
+      GoRoute(
+        path: '/edit-product',
+        builder: (context, state) {
+          final product = state.extra as Product?;
+          if (product == null) {
+            return Scaffold(
+              body: Center(
+                child: Text('Produit non spécifié'),
+              ),
+            );
+          }
+          return EditProductScreen(product: product);
+        },
+      ),
+      // Ajoutez les autres routes de votre AppRouter ici
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false, // Désactiver la bannière de débogage
       title: 'Agbannon - App Marchand', // Titre de l'application
       theme: AppTheme.marchandTheme, // Utilisation du thème marchand
-      initialRoute: Routes
-          .home, // Route initiale modifiée pour démarrer sur la HomeScreen
-      onGenerateRoute: (settings) =>
-          Routes.generateRoute(settings), // Gestion des routes
+      routerConfig: _router, // Utilisation de GoRouter
     );
   }
 }
@@ -53,140 +99,4 @@ class AppProviders {
         ),
         // Ajoutez d'autres ChangeNotifierProvider ici si nécessaire
       ];
-}
-
-class HomePage extends StatefulWidget {
-  @override
-  _HomePageState createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  int _currentIndex = 0;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  final List<Widget> _pages = [
-    HomeContentPage(),
-    CategoriesPage(),
-    ProfilePage(),
-    StatisticsPage(),
-    OrdersPage(),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      appBar: AppBar(
-        title: Text('Ma barre de navigation'),
-        leading: IconButton(
-          icon: Icon(Icons.menu),
-          onPressed: () {
-            _scaffoldKey.currentState?.openDrawer();
-          },
-        ),
-      ),
-      drawer: Drawer(
-        child: ListView(
-          children: [
-            ListTile(
-              leading: Icon(Icons.home),
-              title: Text('Accueil'),
-              onTap: () {
-                setState(() {
-                  _currentIndex = 0;
-                });
-                Navigator.of(context).pop();
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.category),
-              title: Text('Catégorie'),
-              onTap: () {
-                setState(() {
-                  _currentIndex = 1;
-                });
-                Navigator.of(context).pop();
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.person),
-              title: Text('Profil'),
-              onTap: () {
-                setState(() {
-                  _currentIndex = 2;
-                });
-                Navigator.of(context).pop();
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.bar_chart),
-              title: Text('Statistique'),
-              onTap: () {
-                setState(() {
-                  _currentIndex = 3;
-                });
-                Navigator.of(context).pop();
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.shopping_cart),
-              title: Text('Commande'),
-              onTap: () {
-                setState(() {
-                  _currentIndex = 4;
-                });
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        ),
-      ),
-      body: _pages[_currentIndex],
-    );
-  }
-}
-
-class HomeContentPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text('Page d\'accueil'),
-    );
-  }
-}
-
-class CategoriesPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text('Page des catégories'),
-    );
-  }
-}
-
-class ProfilePage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text('Page du profil'),
-    );
-  }
-}
-
-class StatisticsPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text('Page des statistiques'),
-    );
-  }
-}
-
-class OrdersPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text('Page des commandes'),
-    );
-  }
 }
