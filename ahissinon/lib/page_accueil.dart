@@ -22,9 +22,9 @@ class _HomePageState extends State<HomePage> {
     {"name": "Poulet", "image": "asset/poulet.jpg", "price": 6.5, "unit": "kg"},
     {"name": "Oeuf", "image": "asset/oeuf.jpg", "price": 2.2, "unit": "12"},
     {"name": "Huile", "image": "asset/huile.webp", "price": 4.0, "unit": "L"},
-    {"name": "Sucre", "image": "asset/sucre.avif", "price": 1.0, "unit": "kg"},
+    {"name": "Sucre", "image": "asset/sucre.jpg", "price": 1.0, "unit": "kg"},
     {"name": "Sel", "image": "asset/sel.jpg", "price": 0.5, "unit": "kg"},
-    {"name": "Poivre", "image": "asset/poivre2.jpg", "price": 1.8, "unit": "kg"},
+    {"name": "Poivre", "image": "asset/poivre.jpg", "price": 1.8, "unit": "kg"},
     {"name": "Café", "image": "asset/cafe.jpg", "price": 5.0, "unit": "kg"},
     {"name": "Thé", "image": "asset/the.png", "price": 3.5, "unit": "kg"},
     {"name": "Jus", "image": "asset/jus.png", "price": 2.8, "unit": "L"},
@@ -44,9 +44,9 @@ class _HomePageState extends State<HomePage> {
   ];
 
   int _selectedCategory = 0;
-  int _selectedIndex = 0; // Ajout de cette variable pour la gestion de la navigation
+  int _selectedIndex = 0; 
   final List<Map<String, dynamic>> _cartItems = []; // Liste du panier
-// Liste du panier
+ // Liste du panier
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +58,7 @@ class _HomePageState extends State<HomePage> {
             Stack(
               children: [
                 Container(
-                  height: 120, // Hauteur ajustée
+                  height: 120, 
                   decoration: BoxDecoration(
                     image: DecorationImage(
                       image: AssetImage('asset/market.webp'),
@@ -73,7 +73,7 @@ class _HomePageState extends State<HomePage> {
                 Positioned(
                   top: 8,
                   left: 16,
-                  right: 16, // Pour centrer les éléments horizontalement
+                  right: 16, 
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

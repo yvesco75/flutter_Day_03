@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   background_app_bar: ^2.1.0+1
   firebase_core: ^3.12.1
+  geolocator: ^13.0.2
 
 dev_dependencies:
   flutter_test:
@@ -73,7 +74,7 @@ flutter:
   - asset/poulet.jpg
   - asset/oeuf.jpg
   - asset/huile.webp
-  - asset/sucre.avif
+  - asset/sucre.jpg
   - asset/sel.jpg
   - asset/poivre.jpg
   - asset/cafe.jpg
