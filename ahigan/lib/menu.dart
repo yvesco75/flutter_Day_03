@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class MenuPage extends StatefulWidget {
+  const MenuPage({super.key, required String title});
+
   @override
   _MenuPageState createState() => _MenuPageState();
 }
