@@ -1,3 +1,4 @@
+import 'package:ahigan/pages/liste_commandes.dart';
 import 'package:flutter/material.dart';
 
 class MenuPage extends StatefulWidget {
@@ -39,14 +40,17 @@ class _MenuPageState extends State<MenuPage> {
               children: [
                 // Conteneur 1 : Consulter
                 _buildMarketContainer(
-                  context,
-                  icon: Icons.store,
-                  text: "Consulter",
-                  isHovered: _isHovered1,
-                  onTap: () => Navigator.pushNamed(context, '/consulter'),
-                  onEnter: () => setState(() => _isHovered1 = true),
-                  onExit: () => setState(() => _isHovered1 = false),
-                ),
+  context,
+  icon: Icons.store,
+  text: "Consulter",
+  isHovered: _isHovered1,
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const ListeCommandes()),
+  ),
+  onEnter: () => setState(() => _isHovered1 = true),
+  onExit: () => setState(() => _isHovered1 = false),
+),
                 // Conteneur 2 : Commandes
                 _buildMarketContainer(
                   context,
