@@ -20,7 +20,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
 
-  String? _selectedCategoryId;
+  String? _selectedCategoryId; // Pour stocker la catégorie sélectionnée
   File? _imageFile;
   bool _isLoading = false;
 
@@ -29,6 +29,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialiser la catégorie sélectionnée
     _selectedCategoryId = widget.initialCategoryId;
     _fetchCategories();
   }
@@ -109,8 +110,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     try {
       final imageUrl = await _uploadImage();
 
-      final productRef =
-          await FirebaseFirestore.instance.collection('products').add({
+      await FirebaseFirestore.instance.collection('products').add({
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
         'price': double.parse(_priceController.text.trim()),
@@ -121,10 +121,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
       if (!mounted) return;
 
-      String categoryName = _categories.firstWhere(
-          (cat) => cat['id'] == _selectedCategoryId,
-          orElse: () => {'id': '', 'name': 'Inconnu'})['name']!;
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Produit ajouté avec succès'),
@@ -132,9 +128,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
         ),
       );
 
-      // Navigation sécurisée
-      context.go('/categories/$_selectedCategoryId/products',
-          extra: {'categoryName': categoryName});
+      // Navigation vers la liste des produits de la catégorie
+      context.go('/categories/$_selectedCategoryId/products');
     } catch (e) {
       if (!mounted) return;
 
@@ -160,7 +155,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
         title: const Text('Ajouter un produit'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/categories'),
+          onPressed: () =>
+              context.go('/categories'), // Retourne à la liste des catégories
         ),
       ),
       body: _isLoading
@@ -172,7 +168,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Image selection
+                    // Sélection d'image
                     GestureDetector(
                       onTap: _pickImage,
                       child: Container(
@@ -243,7 +239,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Catégorie
+                    // Sélecteur de catégorie
                     DropdownButtonFormField<String>(
                       decoration: const InputDecoration(
                         labelText: 'Catégorie',

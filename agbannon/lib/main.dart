@@ -15,6 +15,7 @@ import 'package:agbannon/screens/profile/profile_screen.dart';
 import '../../screens/products/add_product_screen.dart';
 import '../../screens/products/edit_product_screen.dart';
 import '../../models/product.dart';
+import 'package:agbannon/widgets/common/bottom_nav.dart'; // Import BottomNavBar
 
 void main() async {
   // Initialisation de Flutter
@@ -43,20 +44,19 @@ class MyApp extends StatelessWidget {
   MyApp({Key? key}) : super(key: key);
 
   final _router = GoRouter(
-    initialLocation: '/', // Route initiale
+    initialLocation: '/home', // Route initiale
     routes: [
       GoRoute(
-        path: '/',
-        builder: (context, state) => const HomeScreen(), // Écran principal
+        path: '/home',
+        builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(
         path: '/categories',
-        builder: (context, state) =>
-            const CategoriesScreen(), // Écran des catégories
+        builder: (context, state) => const CategoriesScreen(),
       ),
       GoRoute(
         path: '/profile',
-        builder: (context, state) => ProfilScreen(), // Écran du profil
+        builder: (context, state) => ProfilScreen(),
       ),
       GoRoute(
         path: '/add-product',
@@ -102,4 +102,57 @@ class AppProviders {
         ),
         // Ajoutez d'autres ChangeNotifierProvider ici si nécessaire
       ];
+}
+
+// Widget enveloppeur pour inclure la BottomNavBar
+class BottomNavBarWrapper extends StatefulWidget {
+  final Widget child;
+
+  const BottomNavBarWrapper({
+    Key? key,
+    required this.child,
+  }) : super(key: key);
+
+  @override
+  State<BottomNavBarWrapper> createState() => _BottomNavBarWrapperState();
+}
+
+class _BottomNavBarWrapperState extends State<BottomNavBarWrapper> {
+  int _currentIndex = 0;
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+
+    // Gérer la navigation en fonction de l'index sélectionné
+    switch (index) {
+      case 0:
+        GoRouter.of(context).go('/home');
+        break;
+      case 1:
+        GoRouter.of(context).go('/categories');
+        break;
+      case 2:
+        GoRouter.of(context).go('/orders');
+        break;
+      case 3:
+        GoRouter.of(context).go('/stats');
+        break;
+      case 4:
+        GoRouter.of(context).go('/offers');
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: widget.child,
+      bottomNavigationBar: BottomNavBar(
+        selectedIndex: _currentIndex,
+        onItemTapped: _onItemTapped,
+      ),
+    );
+  }
 }

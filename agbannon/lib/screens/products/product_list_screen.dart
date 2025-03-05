@@ -10,7 +10,7 @@ class ProductListScreen extends StatefulWidget {
   const ProductListScreen({
     Key? key,
     required this.categoryId,
-    required this.categoryName,
+    this.categoryName = 'Produits', // Valeur par défaut pour categoryName
   }) : super(key: key);
 
   // Constructeur de fabrique pour la création à partir des paramètres de route Go Router
@@ -87,93 +87,99 @@ class _ProductListScreenState extends State<ProductListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.categoryName}'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: loadProducts,
-            tooltip: 'Actualiser',
-          ),
-        ],
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : products.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('Aucun produit trouvé dans cette catégorie'),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: () => context.goNamed('add-product'),
-                        child: const Text('Ajouter un produit'),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: loadProducts,
-                  child: ListView.builder(
-                    itemCount: products.length,
-                    itemBuilder: (context, index) {
-                      final product = products[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        elevation: 3,
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.all(10),
-                          leading: Hero(
-                            tag: 'product_image_${product.id}',
-                            child: CircleAvatar(
-                              radius: 30,
-                              backgroundImage: NetworkImage(product.imageUrl),
-                              onBackgroundImageError: (_, __) =>
-                                  const Icon(Icons.image_not_supported),
-                            ),
-                          ),
-                          title: Text(
-                            product.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product.description,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                '\$${product.price.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  color: Colors.green[700],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          trailing:
-                              const Icon(Icons.arrow_forward_ios, size: 20),
-                          onTap: () {
-                            // Navigation vers les détails du produit avec go_router
-                            context.goNamed('edit-product', extra: product);
-                          },
+        appBar: AppBar(
+          title: Text('${widget.categoryName}'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: loadProducts,
+              tooltip: 'Actualiser',
+            ),
+          ],
+        ),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : products.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Aucun produit trouvé dans cette catégorie'),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: () => context.goNamed('add-product'),
+                          child: const Text('Ajouter un produit'),
                         ),
-                      );
-                    },
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: loadProducts,
+                    child: ListView.builder(
+                      itemCount: products.length,
+                      itemBuilder: (context, index) {
+                        final product = products[index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          elevation: 3,
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(10),
+                            leading: Hero(
+                              tag: 'product_image_${product.id}',
+                              child: CircleAvatar(
+                                radius: 30,
+                                backgroundImage: NetworkImage(product.imageUrl),
+                                onBackgroundImageError: (_, __) =>
+                                    const Icon(Icons.image_not_supported),
+                              ),
+                            ),
+                            title: Text(
+                              product.name,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  product.description,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  '\$${product.price.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    color: Colors.green[700],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            trailing:
+                                const Icon(Icons.arrow_forward_ios, size: 20),
+                            onTap: () {
+                              // Navigation vers les détails du produit avec go_router
+                              context.goNamed('edit-product', extra: product);
+                            },
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.goNamed('add-product');
-        },
-        tooltip: 'Ajouter un produit',
-        child: const Icon(Icons.add),
-      ),
-    );
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            try {
+              context.go('/categories/${widget.categoryId}/products/add');
+              // or context.goNamed('add-product', params: {'categoryId': widget.categoryId}); // if you define a named route for add-product
+            } catch (e) {
+              print(
+                  'Error while navigating: $e'); // Affiche l'erreur dans la console s'il y a un problème
+            }
+          },
+          tooltip: 'Ajouter un produit',
+          child: const Icon(Icons.add),
+        ));
   }
 }

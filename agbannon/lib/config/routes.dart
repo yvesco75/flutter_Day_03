@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -66,35 +67,65 @@ final GoRouter appRouter = GoRouter(
 
     // Routes des produits
     GoRoute(
-      path: '/products',
+      path: '/categories/:categoryId/products',
+      name: 'product-list',
       builder: (context, state) {
-        final categoryId = state.uri.queryParameters['categoryId'] ?? '';
-        final categoryName =
-            state.uri.queryParameters['categoryName'] ?? 'Produits';
+        final categoryId = state.pathParameters['categoryId'] ?? '';
+        final extra = state.extra as Map<String, dynamic>?;
+        final categoryName = extra?['categoryName'] as String? ?? 'Produits';
+
         return ProductListScreen(
-          categoryId: categoryId,
+          categoryId: categoryId, // Assurez-vous que categoryId n'est pas vide
           categoryName: categoryName,
         );
       },
       routes: [
         GoRoute(
           path: 'add',
-          builder: (context, state) => const AddProductScreen(),
+          name: 'add-product', // Nom de la route pour ajouter un produit
+          builder: (context, state) {
+            final categoryId = state.pathParameters['categoryId'] ?? '';
+            return AddProductScreen(initialCategoryId: categoryId);
+          },
         ),
         GoRoute(
           path: 'edit/:productId',
           builder: (context, state) {
             final productId = state.pathParameters['productId'];
-            // Vous devrez récupérer le produit complet, par exemple via un provider
-            return EditProductScreen(
-                product: Product(
-              id: productId!,
-              name: 'Nom du produit',
-              description: 'Description',
-              price: 0.0,
-              categoryId: '',
-              imageUrl: '',
-            ));
+
+            return FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('products')
+                  .doc(productId)
+                  .get(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  );
+                } else if (snapshot.hasError) {
+                  return Scaffold(
+                    body: Center(child: Text('Erreur lors du chargement')),
+                  );
+                } else if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return Scaffold(
+                    body: Center(child: Text('Produit non trouvé')),
+                  );
+                }
+
+                // Créez l'objet Product avec les données de Firestore
+                Product product = Product(
+                  id: snapshot.data!.id,
+                  name: snapshot.data!['name'],
+                  description: snapshot.data!['description'],
+                  price: snapshot.data!['price'],
+                  categoryId: snapshot.data!['categoryId'],
+                  imageUrl: snapshot.data!['imageUrl'],
+                );
+
+                return EditProductScreen(product: product);
+              },
+            );
           },
         ),
         GoRoute(
@@ -183,15 +214,15 @@ String? _redirectLogic(BuildContext context, GoRouterState state) {
 
 // Extension pour faciliter la navigation
 extension NavigationExtension on BuildContext {
-  void goToProductDetail(String productId) {
-    go('/products/$productId');
+  void goToProductDetail(String productId, String categoryId) {
+    GoRouter.of(this).go('/categories/$categoryId/products/$productId');
   }
 
   void goToOrderDetail(String orderId) {
-    go('/orders/$orderId');
+    GoRouter.of(this).go('/orders/$orderId');
   }
 
   void goToOfferDetail(String offerId) {
-    go('/offers/$offerId');
+    GoRouter.of(this).go('/offers/$offerId');
   }
 }

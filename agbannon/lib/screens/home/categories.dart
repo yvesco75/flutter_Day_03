@@ -1,9 +1,10 @@
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/category.dart';
-import '../../screens/products/product_list_screen.dart'; // Assurez-vous d'importer correctement
 import '../../widgets/common/app_bar.dart';
 import '../../widgets/common/drawer.dart';
+import '../../widgets/common/bottom_nav.dart'; // Importez BottomNavBar
 
 class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({Key? key}) : super(key: key);
@@ -19,14 +20,12 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   String? _selectedCategoryId;
   bool _isEditing = false;
+  int _selectedIndex = 0; // Index sélectionné pour la BottomNavBar
 
   // Nouvelle méthode pour naviguer vers la liste des produits
   void _navigateToProductList(String categoryId, String categoryName) {
-    Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) => ProductListScreen(
-                categoryId: categoryId, categoryName: categoryName)));
+    GoRouter.of(context).go('/categories/$categoryId/products',
+        extra: {'categoryName': categoryName});
   }
 
   @override
@@ -184,6 +183,25 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     );
   }
 
+  void _onBottomNavBarItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    // Gérer la navigation en fonction de l'index sélectionné
+    switch (index) {
+      case 0: // Accueil
+        GoRouter.of(context).go('/home');
+        break;
+      case 1: // Catégories (rester sur la page actuelle)
+        break;
+      case 2: // Profil
+        GoRouter.of(context).go('/profile');
+        break;
+      // Ajoutez d'autres cas pour les autres éléments de la barre de navigation
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -267,6 +285,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: BottomNavBar(
+        selectedIndex: _selectedIndex,
+        onItemTapped: _onBottomNavBarItemTapped,
       ),
     );
   }

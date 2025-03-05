@@ -6,6 +6,8 @@ import '../../providers/stats_provider.dart';
 import '../../models/stats.dart';
 import '../../widgets/common/loading.dart';
 import '../../utils/formatters.dart';
+import '../../widgets/common/bottom_nav.dart'; // Import BottomNavBar
+import 'package:go_router/go_router.dart';
 
 class StatsScreen extends StatefulWidget {
   static const routeName = '/stats';
@@ -22,6 +24,7 @@ class _StatsScreenState extends State<StatsScreen>
   SalesPeriod _selectedPeriod = SalesPeriod.week;
   late DateTime _startDate;
   late DateTime _endDate;
+  int _currentIndex = 3; // Index pour les statistiques
 
   @override
   void initState() {
@@ -107,6 +110,31 @@ class _StatsScreenState extends State<StatsScreen>
     }
   }
 
+  void _onItemTapped(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+
+    // Gérer la navigation en fonction de l'index sélectionné
+    switch (index) {
+      case 0:
+        GoRouter.of(context).go('/home');
+        break;
+      case 1:
+        GoRouter.of(context).go('/categories');
+        break;
+      case 2:
+        GoRouter.of(context).go('/orders');
+        break;
+      case 3:
+        // Reste sur la page des statistiques
+        break;
+      case 4:
+        GoRouter.of(context).go('/offers');
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -151,6 +179,10 @@ class _StatsScreenState extends State<StatsScreen>
             );
           }
         },
+      ),
+      bottomNavigationBar: BottomNavBar(
+        selectedIndex: _currentIndex,
+        onItemTapped: _onItemTapped,
       ),
     );
   }
@@ -474,19 +506,16 @@ class _StatsScreenState extends State<StatsScreen>
                                 .asMap()
                                 .entries
                                 .map((entry) => FlSpot(
-                                    entry.key.toDouble(), entry.value.value))
+                                      entry.key.toDouble(),
+                                      entry.value.value,
+                                    ))
                                 .toList(),
                             isCurved: true,
                             color: Theme.of(context).primaryColor,
-                            barWidth: 3,
+                            barWidth: 4,
                             isStrokeCapRound: true,
                             dotData: FlDotData(show: false),
-                            belowBarData: BarAreaData(
-                              show: true,
-                              color: Theme.of(context)
-                                  .primaryColor
-                                  .withOpacity(0.2),
-                            ),
+                            belowBarData: BelowBarData(show: false),
                           ),
                         ],
                       ),
@@ -499,24 +528,89 @@ class _StatsScreenState extends State<StatsScreen>
   }
 
   Widget _buildOrderStatusPieChart(SalesStats stats) {
-    // Implement the pie chart
-    return const Text('Pie chart content');
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: SizedBox(
+          height: 250,
+          child: (stats.orderStatusChart.isEmpty)
+              ? const Center(
+                  child: Text('Aucune donnée sur l\'état des commandes'),
+                )
+              : PieChart(
+                  PieChartData(
+                    sections: stats.orderStatusChart.map((data) {
+                      return PieChartSectionData(
+                        color: data.color,
+                        value: data.value,
+                        title: '${data.value.toStringAsFixed(1)}%',
+                        radius: 60,
+                        titleStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      );
+                    }).toList(),
+                    borderData: FlBorderData(show: false),
+                    sectionsSpace: 0,
+                    centerSpaceRadius: 40,
+                  ),
+                ),
+        ),
+      ),
+    );
   }
 
   Widget _buildTopProductsList(SalesStats stats) {
-    // Implement the product list
-    return const Text('Top products content');
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: stats.topProducts.length,
+              separatorBuilder: (context, index) => const Divider(),
+              itemBuilder: (context, index) {
+                final product = stats.topProducts[index];
+                return ListTile(
+                  leading: CircleAvatar(
+                    child: Text('${index + 1}'),
+                  ),
+                  title: Text(product.name),
+                  trailing: Text(CurrencyFormatter.formatPrice(product.revenue),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildSalesTab() {
     return const Center(
-      child: Text('Sales Tab Content'),
+      child: Text('Sales Data Content'),
     );
   }
 
   Widget _buildProductsTab() {
     return const Center(
-      child: Text('Products Tab Content'),
+      child: Text('Products Data Content'),
     );
   }
+}
+
+enum SalesPeriod {
+  day,
+  week,
+  month,
+  year,
+  custom,
 }
