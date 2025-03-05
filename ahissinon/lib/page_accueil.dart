@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'profil_page.dart';
 import 'porte_feuille_page.dart';
 import 'panier_page.dart';
+import 'user_profile.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -12,26 +13,26 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final List<Map<String, dynamic>> _products = [
-    {"name": "Tomate", "image": "asset/tomate.jpg", "price": 2.5, "unit": "kg"},
-    {"name": "Pomme", "image": "asset/pomme.jpg", "price": 1.8, "unit": "kg"},
-    {"name": "Carotte", "image": "asset/carotte.jpg", "price": 1.2, "unit": "kg"},
-    {"name": "Banane", "image": "asset/banane.webp", "price": 2.0, "unit": "kg"},
-    {"name": "Poisson", "image": "asset/poisson.jpg", "price": 8.0, "unit": "kg"},
-    {"name": "Lait", "image": "asset/lait.webp", "price": 1.5, "unit": "L"},
-    {"name": "Riz", "image": "asset/riz.webp", "price": 3.0, "unit": "kg"},
-    {"name": "Poulet", "image": "asset/poulet.jpg", "price": 6.5, "unit": "kg"},
-    {"name": "Oeuf", "image": "asset/oeuf.jpg", "price": 2.2, "unit": "12"},
-    {"name": "Huile", "image": "asset/huile.webp", "price": 4.0, "unit": "L"},
-    {"name": "Sucre", "image": "asset/sucre.jpg", "price": 1.0, "unit": "kg"},
-    {"name": "Sel", "image": "asset/sel.jpg", "price": 0.5, "unit": "kg"},
-    {"name": "Poivre", "image": "asset/poivre.jpg", "price": 1.8, "unit": "kg"},
-    {"name": "Café", "image": "asset/cafe.jpg", "price": 5.0, "unit": "kg"},
-    {"name": "Thé", "image": "asset/the.png", "price": 3.5, "unit": "kg"},
-    {"name": "Jus", "image": "asset/jus.png", "price": 2.8, "unit": "L"},
-    {"name": "Eau", "image": "asset/eau.jpg", "price": 0.8, "unit": "L"},
-    {"name": "Pain", "image": "asset/pain.jfif", "price": 1.2, "unit": "pièce"},
-    {"name": "Farine", "image": "asset/farine.jfif", "price": 2.0, "unit": "kg"},
-    {"name": "Pâtes", "image": "asset/pates.jpg", "price": 1.5, "unit": "kg"},
+    {"name": "Tomate", "image": "asset/tomate.jpg", "price": 2.5, "unit": "kg", "category": "Légumes"},
+    {"name": "Pomme", "image": "asset/pomme.jpg", "price": 1.8, "unit": "kg", "category": "Fruits"},
+    {"name": "Carotte", "image": "asset/carotte.jpg", "price": 1.2, "unit": "kg", "category": "Légumes"},
+    {"name": "Banane", "image": "asset/banane.webp", "price": 2.0, "unit": "kg", "category": "Fruits"},
+    {"name": "Poisson", "image": "asset/poisson.jpg", "price": 8.0, "unit": "kg", "category": "Viande"},
+    {"name": "Lait", "image": "asset/lait.webp", "price": 1.5, "unit": "L", "category": "Produits laitiers"},
+    {"name": "Riz", "image": "asset/riz.webp", "price": 3.0, "unit": "kg", "category": "Céréales"},
+    {"name": "Poulet", "image": "asset/poulet.jpg", "price": 6.5, "unit": "kg", "category": "Viande"},
+    {"name": "Oeuf", "image": "asset/oeuf.jpg", "price": 2.2, "unit": "12", "category": "Produits laitiers"},
+    {"name": "Huile", "image": "asset/huile.webp", "price": 4.0, "unit": "L", "category": "Huiles"},
+    {"name": "Sucre", "image": "asset/sucre.jpg", "price": 1.0, "unit": "kg", "category": "Sucreries"},
+    {"name": "Sel", "image": "asset/sel.jpg", "price": 0.5, "unit": "kg", "category": "Épices"},
+    {"name": "Poivre", "image": "asset/poivre.jpg", "price": 1.8, "unit": "kg", "category": "Épices"},
+    {"name": "Café", "image": "asset/cafe.jpg", "price": 5.0, "unit": "kg", "category": "Boissons"},
+    {"name": "Thé", "image": "asset/the.png", "price": 3.5, "unit": "kg", "category": "Boissons"},
+    {"name": "Jus", "image": "asset/jus.png", "price": 2.8, "unit": "L", "category": "Boissons"},
+    {"name": "Eau", "image": "asset/eau.jpg", "price": 0.8, "unit": "L", "category": "Boissons"},
+    {"name": "Pain", "image": "asset/pain.jfif", "price": 1.2, "unit": "pièce", "category": "Boulangerie"},
+    {"name": "Farine", "image": "asset/farine.jfif", "price": 2.0, "unit": "kg", "category": "Céréales"},
+    {"name": "Pâtes", "image": "asset/pates.jpg", "price": 1.5, "unit": "kg", "category": "Céréales"},
   ];
 
   final List<String> _categories = [
@@ -44,9 +45,15 @@ class _HomePageState extends State<HomePage> {
   ];
 
   int _selectedCategory = 0;
-  int _selectedIndex = 0; 
-  final List<Map<String, dynamic>> _cartItems = []; // Liste du panier
- // Liste du panier
+  int _selectedIndex = 0;
+  final List<Map<String, dynamic>> _cartItems = [];
+  final UserProfile _currentUser = UserProfile(
+    name: 'Franck Morel',
+    email: 'franckmorelassogba@gmail.com',
+    phoneNumber: '66064997',
+    address: 'Abomey calavi, kpota ',
+    preferences: ['Vegetarien', 'Sans gluten'],
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +65,7 @@ class _HomePageState extends State<HomePage> {
             Stack(
               children: [
                 Container(
-                  height: 120, 
+                  height: 120,
                   decoration: BoxDecoration(
                     image: DecorationImage(
                       image: AssetImage('asset/market.webp'),
@@ -73,7 +80,7 @@ class _HomePageState extends State<HomePage> {
                 Positioned(
                   top: 8,
                   left: 16,
-                  right: 16, 
+                  right: 16,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -82,11 +89,15 @@ class _HomePageState extends State<HomePage> {
                         width: 80,
                       ),
                       IconButton(
-                        icon: const Icon(Icons.account_circle, size: 32, color: Colors.black),
+                        icon: const Icon(Icons.account_circle,
+                            size: 32, color: Colors.black),
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => ProfilPage()), // Naviguez vers la page de profil
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ProfilPage(user: _currentUser),
+                            ),
                           );
                         },
                       ),
@@ -129,7 +140,9 @@ class _HomePageState extends State<HomePage> {
                       selectedColor: Colors.orange.shade700,
                       backgroundColor: Colors.white,
                       labelStyle: TextStyle(
-                        color: _selectedCategory == index ? Colors.white : Colors.black,
+                        color: _selectedCategory == index
+                            ? Colors.white
+                            : Colors.black,
                       ),
                     ),
                   );
@@ -145,9 +158,22 @@ class _HomePageState extends State<HomePage> {
                   mainAxisSpacing: 8,
                   childAspectRatio: 0.7,
                 ),
-                itemCount: _products.length,
+                itemCount: _selectedCategory == 0
+                    ? _products.length
+                    : _products
+                        .where((product) =>
+                            product['category'] ==
+                            _categories[_selectedCategory])
+                        .length,
                 itemBuilder: (context, index) {
-                  final product = _products[index];
+                  final filteredProducts = _selectedCategory == 0
+                      ? _products
+                      : _products
+                          .where((product) =>
+                              product['category'] ==
+                              _categories[_selectedCategory])
+                          .toList();
+                  final product = filteredProducts[index];
                   return Card(
                     elevation: 3,
                     shape: RoundedRectangleBorder(
@@ -175,7 +201,8 @@ class _HomePageState extends State<HomePage> {
                             children: [
                               Text(
                                 product["name"]!,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
                               ),
                               Text(
                                 "${product["price"]} €/${product["unit"]}",
@@ -234,12 +261,13 @@ class _HomePageState extends State<HomePage> {
             );
           } else if (index == 2) {
             // Panier
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PanierPage(cartItems: _cartItems),
-              ),
-            );
+          Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => PanierPage(cartItems: _cartItems, user: _currentUser),
+  ),
+);
+
           }
         },
       ),

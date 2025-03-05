@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'checkout_page.dart';
+import 'user_profile.dart';
+import 'chat_page.dart'; // Importez la nouvelle page de chat
 
 class PanierPage extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
+  final UserProfile user;
 
-  const PanierPage({super.key, required this.cartItems});
+  const PanierPage({super.key, required this.cartItems, required this.user});
 
   @override
   State<PanierPage> createState() => _PanierPageState();
@@ -12,11 +15,11 @@ class PanierPage extends StatefulWidget {
 
 class _PanierPageState extends State<PanierPage> {
   double _getShippingCost() {
-    return 5.0; // Exemple de frais de livraison
+    return 5.0;
   }
 
   double _getTaxes() {
-    return 2.0; // Exemple de taxes
+    return 2.0;
   }
 
   double _calculateTotalPrice() {
@@ -162,6 +165,20 @@ class _PanierPageState extends State<PanierPage> {
                                 });
                               },
                             ),
+                            IconButton( // Ajout du bouton de chat ici
+                              icon: const Icon(Icons.chat_bubble),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ChatPage(
+                                      productName: item['name'],
+                                      merchantName: item['merchant'],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ],
                         ),
                       ],
@@ -190,6 +207,7 @@ class _PanierPageState extends State<PanierPage> {
                         builder: (context) => CheckoutPage(
                           cartItems: widget.cartItems,
                           totalPrice: finalTotal,
+                          user: widget.user,
                         ),
                       ),
                     );

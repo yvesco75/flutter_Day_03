@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'user_profile.dart'; // Importez le modèle utilisateur
 
 class ProfilPage extends StatelessWidget {
-  const ProfilPage({super.key}); // Utilisation des super paramètres
+  final UserProfile user;
+
+  const ProfilPage({super.key, required this.user});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Profil'),
+        title: const Text('Profil'),
         backgroundColor: Colors.orange,
       ),
       body: Padding(
@@ -18,31 +21,36 @@ class ProfilPage extends StatelessWidget {
             Center(
               child: CircleAvatar(
                 radius: 50,
-                backgroundImage: AssetImage('asset/default_profile.png'),
+                backgroundImage: const AssetImage('asset/default_profile.png'),
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
-              'Nom: John Doe',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              'Nom: ${user.name}',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 10),
-            Text('Email: john.doe@example.com'),
-            SizedBox(height: 10),
-            Text('Adresse: 123 Main St, Anytown'),
-            SizedBox(height: 20),
-            Text(
+            const SizedBox(height: 10),
+            Text('Email: ${user.email}'),
+            const SizedBox(height: 10),
+            Text('Téléphone: ${user.phoneNumber}'),
+            const SizedBox(height: 10),
+            Text('Adresse: ${user.address}'),
+            const SizedBox(height: 10),
+            Text('Préférences: ${user.preferences.join(', ')}'),
+            const SizedBox(height: 20),
+            const Text(
               'Historique des commandes',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             Expanded(
               child: ListView.builder(
-                itemCount: 5,
+                itemCount: user.orderHistory.length,
                 itemBuilder: (context, index) {
+                  final order = user.orderHistory[index];
                   return ListTile(
                     title: Text('Commande #${index + 1}'),
-                    subtitle: Text('Date: 2023-10-27'),
-                    trailing: Text('Total: 50 €'),
+                    subtitle: Text('Date: ${order['date']}'),
+                    trailing: Text('Total: ${order['total']} €'),
                   );
                 },
               ),

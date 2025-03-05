@@ -1,66 +1,61 @@
 import 'package:flutter/material.dart';
+import 'user_profile.dart';
+import 'profil_page.dart';
 
 class CheckoutPage extends StatelessWidget {
   final List<Map<String, dynamic>> cartItems;
   final double totalPrice;
+  final UserProfile user;
 
-  const CheckoutPage({super.key, required this.cartItems, required this.totalPrice});
+  const CheckoutPage(
+      {super.key,
+      required this.cartItems,
+      required this.totalPrice,
+      required this.user});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Passer à la caisse'),
+        title: const Text('Checkout'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Récapitulatif de la commande',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            Expanded(
-              child: ListView.builder(
-                itemCount: cartItems.length,
-                itemBuilder: (context, index) {
-                  final item = cartItems[index];
-                  return ListTile(
-                    title: Text(item['name']),
-                    subtitle: Text('${item['quantity']} x ${item['price']} €'),
-                  );
-                },
-              ),
-            ),
-            Text('Total: ${totalPrice.toStringAsFixed(2)} €',
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold)),
-            // ... (Ajouter ici les options de paiement, la gestion des adresses, etc.) ...
-            ElevatedButton(
-              onPressed: () {
-                // Logique pour traiter le paiement et confirmer la commande
-                _processPayment(context);
+      body: Column(
+        children: [
+          const Text('Articles à payer:'),
+          Expanded(
+            child: ListView.builder(
+              itemCount: cartItems.length,
+              itemBuilder: (context, index) {
+                final item = cartItems[index];
+                return ListTile(
+                  title: Text(
+                      '${item['name']} - ${item['price']} € x ${item['quantity']}'),
+                );
               },
-              child: const Text('Confirmer la commande'),
             ),
-          ],
-        ),
-      ),
-    );
-  }
+          ),
+          Text('Total: ${totalPrice.toStringAsFixed(2)} €'),
+          ElevatedButton(
+            onPressed: () {
+              // Créer une copie de UserProfile avec la nouvelle commande ajoutée
+              final updatedUser = user.copyWith(
+                orderHistory: [
+                  ...user.orderHistory,
+                  {
+                    'items': cartItems,
+                    'total': totalPrice,
+                  }
+                ],
+              );
 
-  void _processPayment(BuildContext context) {
-    // Implémenter la logique de paiement ici
-    // ...
-    // Une fois le paiement réussi, afficher une confirmation
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Commande confirmée'),
-        content: const Text('Votre commande a été confirmée avec succès.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+              // Naviguer vers la page de profil
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => ProfilPage(user: updatedUser)),
+              );
+            },
+            child: const Text('Confirmer le paiement'),
           ),
         ],
       ),
