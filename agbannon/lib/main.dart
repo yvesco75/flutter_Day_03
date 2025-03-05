@@ -1,8 +1,11 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'package:agbannon/providers/auth_provider.dart';
+import 'package:agbannon/providers/product_provider.dart'; // Import ProductProvider
 import 'package:agbannon/config/theme.dart'; // Importez le fichier theme.dart
 import 'package:go_router/go_router.dart'; // Import go_router
 
@@ -44,20 +47,17 @@ class MyApp extends StatelessWidget {
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) =>
-            const HomeScreen(), // Remplacez par votre écran d'accueil
+        builder: (context, state) => const HomeScreen(), // Écran principal
       ),
       GoRoute(
         path: '/categories',
         builder: (context, state) =>
-            const CategoriesScreen(), // Remplacez par votre écran de catégories
+            const CategoriesScreen(), // Écran des catégories
       ),
       GoRoute(
         path: '/profile',
-        builder: (context, state) =>
-            ProfilScreen(), // Remplacez par votre écran de profil
+        builder: (context, state) => ProfilScreen(), // Écran du profil
       ),
-      // Ajoutez ici les routes que vous aviez dans AppRouter
       GoRoute(
         path: '/add-product',
         builder: (context, state) => const AddProductScreen(),
@@ -96,6 +96,9 @@ class AppProviders {
   static List<ChangeNotifierProvider> get providers => [
         ChangeNotifierProvider<AuthProvider>(
           create: (_) => AuthProvider(),
+        ),
+        ChangeNotifierProvider<ProductProvider>(
+          create: (_) => ProductProvider(),
         ),
         // Ajoutez d'autres ChangeNotifierProvider ici si nécessaire
       ];

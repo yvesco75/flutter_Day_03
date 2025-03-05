@@ -1,45 +1,69 @@
+// lib/widgets/common/bottom_nav_bar.dart
 import 'package:flutter/material.dart';
 
-class CustomBottomNav extends StatefulWidget {
-  final int currentIndex;
-  final Function(int) onTap;
+class BottomNavBar extends StatelessWidget {
+  final int selectedIndex; // L'index de l'élément sélectionné
+  final Function(int) onItemTapped; // Fonction pour gérer le tap
 
-  const CustomBottomNav({
+  const BottomNavBar({
     Key? key,
-    required this.currentIndex,
-    required this.onTap,
+    required this.selectedIndex,
+    required this.onItemTapped,
   }) : super(key: key);
 
   @override
-  _CustomBottomNavState createState() => _CustomBottomNavState();
-}
-
-class _CustomBottomNavState extends State<CustomBottomNav> {
-  @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: widget.currentIndex,
-      onTap: widget.onTap,
-      selectedItemColor: const Color.fromARGB(
-          255, 97, 13, 233), // Couleur de l'élément sélectionné
-      unselectedItemColor: Colors.grey, // Couleur des éléments non sélectionnés
-      showSelectedLabels: true,
-      showUnselectedLabels: true,
-      type: BottomNavigationBarType.fixed,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Accueil',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.shopping_cart),
-          label: 'Commandes',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person),
-          label: 'Profil',
-        ),
-      ],
+    return BottomAppBar(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Barres de navigation pour les sections principales
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.home),
+                onPressed: () => onItemTapped(0), // Accueil
+              ),
+              IconButton(
+                icon: const Icon(Icons.list),
+                onPressed: () => onItemTapped(1), // Commandes
+              ),
+              IconButton(
+                icon: const Icon(Icons.pie_chart),
+                onPressed: () => onItemTapped(2), // Statistiques
+              ),
+            ],
+          ),
+          // Bouton de menu à trois points
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert), // Icone des trois points
+            onSelected: (value) {
+              // Navigation en fonction de l'option sélectionnée
+              switch (value) {
+                case 'profile':
+                  Navigator.pushNamed(
+                      context, '/profile'); // Naviguer vers Profil
+                  break;
+                case 'settings':
+                  Navigator.pushNamed(
+                      context, '/settings'); // Naviguer vers Paramètres
+                  break;
+                // Ajoutez d'autres options ici si nécessaire
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem<String>(
+                value: 'profile',
+                child: Text('Mon Profil'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'settings',
+                child: Text('Paramètres'),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

@@ -3,12 +3,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:go_router/go_router.dart'; // Import Go Router
-import '../../config/routes.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../models/product.dart';
 
 class AddProductScreen extends StatefulWidget {
-  const AddProductScreen({Key? key}) : super(key: key);
+  final String? initialCategoryId;
+
+  const AddProductScreen({Key? key, this.initialCategoryId}) : super(key: key);
 
   @override
   _AddProductScreenState createState() => _AddProductScreenState();
@@ -24,12 +26,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
   File? _imageFile;
   bool _isLoading = false;
 
-  // Liste des catégories (à récupérer de Firestore)
   List<Map<String, String>> _categories = [];
 
   @override
   void initState() {
     super.initState();
+    _selectedCategoryId = widget.initialCategoryId;
     _fetchCategories();
   }
 
@@ -42,6 +44,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
         _categories = querySnapshot.docs.map((DocumentSnapshot doc) {
           return {'id': doc.id, 'name': doc['name'] as String};
         }).toList();
+
+        // Si aucune catégorie n'est sélectionnée et qu'il y a des catégories, sélectionner la première
+        if (_selectedCategoryId == null && _categories.isNotEmpty) {
+          _selectedCategoryId = _categories.first['id'];
+        }
       });
     } catch (e) {
       if (mounted) {
@@ -67,7 +74,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   Future<String> _uploadImage() async {
     if (_imageFile == null) {
-      return ''; // URL d'image par défaut si aucune image n'est sélectionnée
+      return '';
     }
 
     try {
@@ -87,7 +94,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
   Future<void> _addProduct() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Vérifier qu'une catégorie est sélectionnée
     if (_selectedCategoryId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -103,10 +109,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
     });
 
     try {
-      // Télécharger l'image
       final imageUrl = await _uploadImage();
 
-      // Créer le produit dans Firestore
       final productRef =
           await FirebaseFirestore.instance.collection('products').add({
         'name': _nameController.text.trim(),
@@ -117,15 +121,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // Vérifier que le widget est toujours monté avant d'utiliser le contexte
       if (!mounted) return;
 
-      // Obtenir le nom de la catégorie
       String categoryName = _categories.firstWhere(
           (cat) => cat['id'] == _selectedCategoryId,
           orElse: () => {'id': '', 'name': 'Inconnu'})['name']!;
 
-      // Afficher un message de succès
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Produit ajouté avec succès'),
@@ -133,14 +134,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
         ),
       );
 
-      // Utiliser GoRouter pour naviguer vers la liste des produits
-      context.goNamed(
-        'products',
-        pathParameters: {'categoryId': _selectedCategoryId!},
-        extra: {'categoryName': categoryName},
-      );
+      // Navigation sécurisée
+      context.go('/categories/$_selectedCategoryId/products',
+          extra: {'categoryName': categoryName});
     } catch (e) {
-      // Vérifier que le widget est toujours monté avant d'utiliser le contexte
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -163,6 +160,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Ajouter un produit'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/categories'),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -173,7 +174,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Sélection d'image
+                    // Image selection
                     GestureDetector(
                       onTap: _pickImage,
                       child: Container(
@@ -190,7 +191,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Champ de nom
+                    // Nom du produit
                     TextFormField(
                       controller: _nameController,
                       decoration: const InputDecoration(
@@ -206,7 +207,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Champ de description
+                    // Description
                     TextFormField(
                       controller: _descriptionController,
                       decoration: const InputDecoration(
@@ -223,7 +224,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Champ de prix
+                    // Prix
                     TextFormField(
                       controller: _priceController,
                       decoration: const InputDecoration(
@@ -244,7 +245,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Sélection de catégorie
+                    // Catégorie
                     DropdownButtonFormField<String>(
                       decoration: const InputDecoration(
                         labelText: 'Catégorie',

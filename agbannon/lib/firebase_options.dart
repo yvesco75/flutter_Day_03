@@ -41,47 +41,47 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCZNXQXITva7nFR5n5EADEOI1Cw6eXRBUQ',
-    appId: '1:344110366088:web:29b45cbee0333e79754e3d',
-    messagingSenderId: '344110366088',
-    projectId: 'dclic-market-93bdb',
-    authDomain: 'dclic-market-93bdb.firebaseapp.com',
-    storageBucket: 'dclic-market-93bdb.firebasestorage.app',
+    apiKey: 'AIzaSyAclJOsAjpHW31-JqO225Vkuo1BCNBVXaM',
+    appId: '1:803457253528:web:52b3e52c7c61ac8192d0ed',
+    messagingSenderId: '803457253528',
+    projectId: 'dclicmarket-3ee30',
+    authDomain: 'dclicmarket-3ee30.firebaseapp.com',
+    storageBucket: 'dclicmarket-3ee30.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCV1CM4CGrlcIVx7oTyVR-3bSFkqM-3Z0Y',
-    appId: '1:344110366088:android:5b2c578888bd2f37754e3d',
-    messagingSenderId: '344110366088',
-    projectId: 'dclic-market-93bdb',
-    storageBucket: 'dclic-market-93bdb.firebasestorage.app',
+    apiKey: 'AIzaSyDvtpjW9_rrbnZRyrb-nl6xnSrIM6M_oRQ',
+    appId: '1:803457253528:android:8d78ad2d982c495c92d0ed',
+    messagingSenderId: '803457253528',
+    projectId: 'dclicmarket-3ee30',
+    storageBucket: 'dclicmarket-3ee30.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCcci4o_n0mDkOcZMUPtlG6LfVK0HInfYY',
-    appId: '1:344110366088:ios:0e325db391baebd0754e3d',
-    messagingSenderId: '344110366088',
-    projectId: 'dclic-market-93bdb',
-    storageBucket: 'dclic-market-93bdb.firebasestorage.app',
+    apiKey: 'AIzaSyBuelShnDpYWOr2yOWEWf_xJscR4xDLIyM',
+    appId: '1:803457253528:ios:31ff520ad47ce37092d0ed',
+    messagingSenderId: '803457253528',
+    projectId: 'dclicmarket-3ee30',
+    storageBucket: 'dclicmarket-3ee30.firebasestorage.app',
     iosBundleId: 'com.example.agbannon',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCcci4o_n0mDkOcZMUPtlG6LfVK0HInfYY',
-    appId: '1:344110366088:ios:0e325db391baebd0754e3d',
-    messagingSenderId: '344110366088',
-    projectId: 'dclic-market-93bdb',
-    storageBucket: 'dclic-market-93bdb.firebasestorage.app',
+    apiKey: 'AIzaSyBuelShnDpYWOr2yOWEWf_xJscR4xDLIyM',
+    appId: '1:803457253528:ios:31ff520ad47ce37092d0ed',
+    messagingSenderId: '803457253528',
+    projectId: 'dclicmarket-3ee30',
+    storageBucket: 'dclicmarket-3ee30.firebasestorage.app',
     iosBundleId: 'com.example.agbannon',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCZNXQXITva7nFR5n5EADEOI1Cw6eXRBUQ',
-    appId: '1:344110366088:web:13672d288b49ab13754e3d',
-    messagingSenderId: '344110366088',
-    projectId: 'dclic-market-93bdb',
-    authDomain: 'dclic-market-93bdb.firebaseapp.com',
-    storageBucket: 'dclic-market-93bdb.firebasestorage.app',
+    apiKey: 'AIzaSyAclJOsAjpHW31-JqO225Vkuo1BCNBVXaM',
+    appId: '1:803457253528:web:93773e823ee4a14a92d0ed',
+    messagingSenderId: '803457253528',
+    projectId: 'dclicmarket-3ee30',
+    authDomain: 'dclicmarket-3ee30.firebaseapp.com',
+    storageBucket: 'dclicmarket-3ee30.firebasestorage.app',
   );
 
 }

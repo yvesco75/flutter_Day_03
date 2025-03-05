@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "344110366088",
-    "project_id": "dclic-market-93bdb",
-    "storage_bucket": "dclic-market-93bdb.firebasestorage.app"
+    "project_number": "803457253528",
+    "project_id": "dclicmarket-3ee30",
+    "storage_bucket": "dclicmarket-3ee30.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:344110366088:android:5b2c578888bd2f37754e3d",
+        "mobilesdk_app_id": "1:803457253528:android:8d78ad2d982c495c92d0ed",
         "android_client_info": {
           "package_name": "com.example.agbannon"
         }
@@ -15,7 +15,45 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCV1CM4CGrlcIVx7oTyVR-3bSFkqM-3Z0Y"
+          "current_key": "AIzaSyDvtpjW9_rrbnZRyrb-nl6xnSrIM6M_oRQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:803457253528:android:f2dd98ed265bf80c92d0ed",
+        "android_client_info": {
+          "package_name": "com.example.ahigan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvtpjW9_rrbnZRyrb-nl6xnSrIM6M_oRQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:803457253528:android:9a01c3b0d705bb8e92d0ed",
+        "android_client_info": {
+          "package_name": "com.example.ahissinon"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvtpjW9_rrbnZRyrb-nl6xnSrIM6M_oRQ"
         }
       ],
       "services": {

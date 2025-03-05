@@ -40,16 +40,18 @@ class Product {
   }
 
   // Créer un objet Product à partir d'un Map de Firestore
-  factory Product.fromMap(String id, Map<String, dynamic> map) {
+  factory Product.fromMap(Map<String, dynamic> map) {
     return Product(
-      id: id, // Utilisez l'ID passé en paramètre
+      id: map['id'] ?? '',
       name: map['name'] ?? '',
       description: map['description'] ?? '',
       price: (map['price'] ?? 0).toDouble(),
       imageUrl: map['imageUrl'] ?? '',
       categoryId: map['categoryId'] ?? '',
+      category: map['category'] ?? '', // Ajout de category
       stock: map['stock'] ?? 0,
       isAvailable: map['isAvailable'] ?? true,
+      quantity: map['quantity'] ?? 0, // Ajout de quantity
     );
   }
 

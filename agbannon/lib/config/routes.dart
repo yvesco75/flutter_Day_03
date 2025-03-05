@@ -1,144 +1,148 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
-// Importations de vos écrans
-import '../providers/auth_provider.dart';
+// Imports des écrans
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
-import '../screens/auth/forgot_password_screen.dart';
 import '../screens/home/home_screen.dart';
-import '../screens/home/categories.dart';
+
+// Écrans de produits
 import '../screens/products/product_list_screen.dart';
+import '../screens/products/product_detail_screen.dart';
 import '../screens/products/add_product_screen.dart';
 import '../screens/products/edit_product_screen.dart';
-import '../models/product.dart';
 
-class AppRouter {
-  static final GoRouter router = GoRouter(
-    // Redirection globale basée sur l'authentification
-    redirect: (BuildContext context, GoRouterState state) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final bool isAuthenticated = authProvider.isAuthenticated;
-      final bool isLoading = authProvider.isLoading;
+// Écrans de commandes
+import '../screens/orders/order_list_screen.dart';
+import '../screens/orders/order_detail_screen.dart';
 
-      // Routes publiques
-      final bool isPublicRoute = ['/login', '/register', '/forgot-password']
-          .contains(state.uri.toString());
+// Écrans d'offres
+import '../screens/offers/offer_list_screen.dart';
+import '../screens/offers/create_offer_screen.dart';
 
-      // Si pas authentifié et pas sur une route publique, rediriger vers login
-      if (isLoading) {
-        return null; // Attendre le chargement
-      }
+// Écrans de paiement et profil
+import '../screens/payments/payment_screen.dart';
+import '../screens/profile/profile_screen.dart';
 
-      if (!isAuthenticated && !isPublicRoute) {
-        return '/login';
-      }
+// Providers pour la logique d'authentification
+import '../providers/auth_provider.dart';
 
-      // Si authentifié et sur une route publique, rediriger vers home
-      if (isAuthenticated && isPublicRoute) {
-        return '/';
-      }
-
-      return null;
-    },
-
-    // Configuration des routes
-    routes: [
-      // Route de connexion
-      GoRoute(
-        path: '/login',
-        name: 'login',
-        builder: (context, state) => LoginScreen(
-          toggleView: () => context.go('/register'),
-        ),
-      ),
-
-      // Route d'inscription
-      GoRoute(
-        path: '/register',
-        name: 'register',
-        builder: (context, state) => RegisterScreen(
-          toggleView: () => context.go('/login'),
-        ),
-      ),
-
-      // Route de réinitialisation de mot de passe
-      GoRoute(
-        path: '/forgot-password',
-        name: 'forgot-password',
-        builder: (context, state) => const ForgotPasswordScreen(),
-      ),
-
-      // Route principale (home)
-      GoRoute(
-        path: '/',
-        name: 'home',
-        builder: (context, state) => const HomeScreen(),
-        routes: [
-          // Routes imbriquées sous home
-          GoRoute(
-            path: 'categories',
-            name: 'categories',
-            builder: (context, state) => const CategoriesScreen(),
-          ),
-          // Nouvelle route pour afficher les produits d'une catégorie
-          GoRoute(
-            path: 'products/:categoryId',
-            name: 'products',
-            builder: (context, state) =>
-                ProductListScreen.fromGoRouterState(state),
-          ),
-          // Route pour ajouter un produit (déplacée dans les routes imbriquées)
-          GoRoute(
-            path: 'add-product',
-            name: 'add-product',
-            builder: (context, state) => const AddProductScreen(),
-          ),
-          // Route pour éditer un produit (déplacée dans les routes imbriquées)
-          GoRoute(
-            path: '/edit-product',
-            name: 'edit-product',
-            builder: (context, state) {
-              final product = state.extra as Product?;
-              if (product == null) {
-                return Scaffold(
-                  body: Center(
-                    child: Text('Produit non spécifié'),
-                  ),
-                );
-              }
-              return EditProductScreen(product: product);
-            },
-          ),
-        ],
-      ),
-    ],
-
-    // Gestionnaire d'erreurs
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Text('Route non trouvée: ${state.error}'),
-      ),
+final GoRouter appRouter = GoRouter(
+  initialLocation: '/login',
+  redirect: _redirectLogic,
+  routes: [
+    // Routes d'authentification
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginScreen(),
     ),
-  );
+    GoRoute(
+      path: '/register',
+      builder: (context, state) => const RegisterScreen(),
+    ),
 
-  // Méthodes de navigation statiques
-  static void navigateTo(BuildContext context, String route) {
-    context.go(route);
+    // Route principale (home)
+    GoRoute(
+      path: '/home',
+      builder: (context, state) => const HomeScreen(),
+    ),
+
+    // Routes des produits
+    GoRoute(
+      path: '/products',
+      builder: (context, state) => const ProductListScreen(),
+      routes: [
+        GoRoute(
+          path: 'add',
+          builder: (context, state) => const AddProductScreen(),
+        ),
+        GoRoute(
+          path: 'edit/:productId',
+          builder: (context, state) {
+            final productId = state.pathParameters['productId'];
+            return EditProductScreen(productId: productId);
+          },
+        ),
+        GoRoute(
+          path: ':productId',
+          builder: (context, state) {
+            final productId = state.pathParameters['productId'];
+            return ProductDetailScreen(productId: productId);
+          },
+        ),
+      ],
+    ),
+
+    // Routes des commandes
+    GoRoute(
+      path: '/orders',
+      builder: (context, state) => const OrderListScreen(),
+      routes: [
+        GoRoute(
+          path: ':orderId',
+          builder: (context, state) {
+            final orderId = state.pathParameters['orderId'];
+            return OrderDetailScreen(orderId: orderId);
+          },
+        ),
+      ],
+    ),
+
+    // Routes des offres
+    GoRoute(
+      path: '/offers',
+      builder: (context, state) => const OfferListScreen(),
+      routes: [
+        GoRoute(
+          path: 'create',
+          builder: (context, state) => const CreateOfferScreen(),
+        ),
+      ],
+    ),
+
+    // Routes supplémentaires
+    GoRoute(
+      path: '/payments',
+      builder: (context, state) => const PaymentScreen(),
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileScreen(),
+    ),
+  ],
+  errorBuilder: (context, state) => Scaffold(
+    body: Center(
+      child: Text('Page non trouvée: ${state.error}'),
+    ),
+  ),
+);
+
+// Logique de redirection basée sur l'authentification
+String? _redirectLogic(BuildContext context, GoRouterState state) {
+  // Vérifier l'état de connexion
+  final authProvider = AuthProvider(); // Assurez-vous d'injecter correctement
+  final isLoggedIn = authProvider.isAuthenticated;
+
+  final isLoggingIn = state.subloc == '/login' || state.subloc == '/register';
+
+  if (!isLoggedIn && !isLoggingIn) {
+    return '/login';
   }
 
-  static void navigateToWithArgs(
-      BuildContext context, String route, Object? extra) {
-    context.go(route, extra: extra);
+  if (isLoggedIn && isLoggingIn) {
+    return '/home';
   }
 
-  static void pushTo(BuildContext context, String route) {
-    context.push(route);
+  return null;
+}
+
+// Extension pour faciliter la navigation
+extension NavigationExtension on BuildContext {
+  void goToProductDetail(String productId) {
+    go('/products/$productId');
   }
 
-  static void pushToWithArgs(
-      BuildContext context, String route, Object? extra) {
-    context.push(route, extra: extra);
+  void goToOrderDetail(String orderId) {
+    go('/orders/$orderId');
   }
 }
