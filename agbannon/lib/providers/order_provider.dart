@@ -78,7 +78,7 @@ class OrderProvider with ChangeNotifier {
   }
 
   Future<void> updateOrderStatus(String orderId, OrderModel.OrderStatus status,
-      BuildContext context, // Ajoutez ce paramètre
+      BuildContext context, // Ajouté ce paramètre
       {String? reason}) async {
     try {
       await _firestore.collection('orders').doc(orderId).update({
@@ -95,9 +95,8 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
-  Future<void> markOrderAsPaid(String orderId, DateTime paymentDate,
-      BuildContext context // Ajoutez ce paramètre
-      ) async {
+  Future<void> markOrderAsPaid(
+      String orderId, DateTime paymentDate, BuildContext context) async {
     try {
       await _firestore
           .collection('orders')

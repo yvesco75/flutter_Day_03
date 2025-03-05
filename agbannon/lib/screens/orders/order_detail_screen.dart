@@ -55,8 +55,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     try {
       // Utilisation de l'alias OrderProv pour accéder à OrderProvider
+
       await Provider.of<OrderProvider>(context, listen: false)
-          .updateOrderStatus(widget.orderId, status);
+          .updateOrderStatus(
+              widget.orderId, status, context); // Ajoutez 'context' ici
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Statut de la commande mis à jour')),
       );
@@ -470,7 +473,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     try {
       await Provider.of<OrderProvider>(context, listen: false)
-          .markOrderAsPaid(widget.orderId, selectedDate);
+          .markOrderAsPaid(widget.orderId, selectedDate, context);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Commande marquée comme payée')),
