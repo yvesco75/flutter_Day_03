@@ -3,7 +3,10 @@ import '../../models/product.dart';
 import '../../utils/formatters.dart';
 
 class ProductDetailScreen extends StatefulWidget {
-  const ProductDetailScreen({Key? key}) : super(key: key);
+  final String productId; // Ajout du paramètre productId
+
+  const ProductDetailScreen({Key? key, required this.productId})
+      : super(key: key);
 
   @override
   _ProductDetailScreenState createState() => _ProductDetailScreenState();
@@ -16,13 +19,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    final args = ModalRoute.of(context)!.settings.arguments;
-    if (args != null && args is Product) {
-      _product = args;
-    } else {
-      // Rediriger si aucun produit n'est fourni
-      Navigator.of(context).pop();
-    }
+    // Simuler la récupération du produit par son ID (à remplacer par votre logique)
+    _product = Product(
+      id: widget.productId,
+      name: 'Produit ${widget.productId}',
+      price: 19.99,
+      categoryId: 'categorie_id_exemple', // Ajoutez cette ligne
+      category: 'Catégorie',
+      quantity: 10,
+      description: 'Description du produit',
+      imageUrl: '',
+    );
   }
 
   @override
@@ -41,8 +48,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ).then((_) {
                 // Actualiser l'écran après modification
                 Navigator.of(context).pop();
-                Navigator.pushNamed(context, '/product-detail',
-                    arguments: _product);
+                Navigator.pushNamed(
+                  context,
+                  '/product-detail',
+                  arguments: _product,
+                );
               });
             },
           ),

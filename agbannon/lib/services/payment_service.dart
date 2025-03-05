@@ -1,11 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // Import provider
 import 'package:intl/intl.dart';
 import '../models/payment.dart'; // Import Payment et PaymentMethod
 import '../providers/order_provider.dart';
-import '../widgets/common/loading.dart';
-import '../utils/formatters.dart';
 
 class PaymentService {
   final BuildContext context;

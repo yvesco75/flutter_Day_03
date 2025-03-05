@@ -26,7 +26,7 @@ class OrderService {
   Future<void> updateOrderStatus(String orderId, OrderStatus status) async {
     try {
       await Provider.of<OrderProvider>(context, listen: false)
-          .updateOrderStatus(orderId, status);
+          .updateOrderStatus(orderId, status, context); // Ajoutez 'context' ici
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

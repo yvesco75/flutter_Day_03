@@ -1,172 +1,123 @@
-// lib/screens/offers/offer_list_screen.dart
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../models/offer.dart';
 import '../../providers/offer_provider.dart';
 import '../../widgets/common/app_bar.dart';
-import '../../widgets/common/loading.dart';
 
-class OfferListScreen extends StatefulWidget {
-  const OfferListScreen({Key? key}) : super(key: key);
+class CreateOfferScreen extends StatefulWidget {
+  const CreateOfferScreen({Key? key}) : super(key: key);
 
   @override
-  _OfferListScreenState createState() => _OfferListScreenState();
+  State<CreateOfferScreen> createState() => _CreateOfferScreenState();
 }
 
-class _OfferListScreenState extends State<OfferListScreen> {
+class _CreateOfferScreenState extends State<CreateOfferScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _discountPercentageController = TextEditingController();
+  final _endDateController = TextEditingController();
+
   @override
-  void initState() {
-    super.initState();
-    // Charger les offres lors de l'initialisation de l'écran
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<OfferProvider>(context, listen: false).fetchOffers();
-    });
+  void dispose() {
+    _titleController.dispose();
+    _discountPercentageController.dispose();
+    _endDateController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
-        title: 'Mes Offres',
+        title: 'Créer une offre',
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => context.go('/offers/create'),
-          ),
-        ],
-      ),
-      body: Consumer<OfferProvider>(
-        builder: (context, offerProvider, child) {
-          // Gestion des différents états de chargement
-          if (offerProvider.isLoading) {
-            return const LoadingWidget();
-          }
+            icon: const Icon(Icons.save, color: Colors.blue),
+            onPressed: () async {
+              if (_formKey.currentState!.validate()) {
+                final offer = Offer(
+                  title: _titleController.text,
+                  description: '', // Description vide
+                  discountPercentage:
+                      double.parse(_discountPercentageController.text),
+                  startDate: DateTime.now(), // Date de début actuelle
+                  endDate: DateTime.parse(
+                      _endDateController.text), // Date de fin parsée
+                  applicableProductIds: [], // Liste vide pour les IDs de produits applicables
+                );
 
-          if (offerProvider.errorMessage != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Erreur : ${offerProvider.errorMessage}'),
-                  ElevatedButton(
-                    onPressed: () => offerProvider.fetchOffers(),
-                    child: const Text('Réessayer'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          // Liste des offres
-          final offers = offerProvider.offers;
-
-          if (offers.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.local_offer_outlined,
-                    size: 100,
-                    color: Colors.grey,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Aucune offre disponible',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => offerProvider.fetchOffers(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: offers.length,
-              itemBuilder: (context, index) {
-                final offer = offers[index];
-                return _buildOfferCard(context, offer);
-              },
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildOfferCard(BuildContext context, Offer offer) {
-    return Card(
-      elevation: 4,
-      margin: const EdgeInsets.only(bottom: 16),
-      child: ListTile(
-        title: Text(
-          offer.title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Réduction: ${offer.discountPercentage}%'),
-            Text('Valide jusqu\'au: ${offer.endDate}'),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
-              onPressed: () {
-                // Navigation vers l'écran d'édition de l'offre
-                context.go('/offers/edit/${offer.id}');
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () {
-                _showDeleteConfirmationDialog(context, offer);
-              },
-            ),
-          ],
-        ),
-        onTap: () {
-          // Navigation vers les détails de l'offre
-          context.go('/offers/${offer.id}');
-        },
-      ),
-    );
-  }
-
-  void _showDeleteConfirmationDialog(BuildContext context, Offer offer) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Supprimer l\'offre'),
-        content: const Text('Êtes-vous sûr de vouloir supprimer cette offre ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Suppression de l'offre
-              Provider.of<OfferProvider>(context, listen: false)
-                  .deleteOffer(offer.id);
-              Navigator.of(context).pop();
+                try {
+                  await Provider.of<OfferProvider>(context, listen: false)
+                      .addOffer(offer);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Offre créée avec succès')),
+                  );
+                  context.go('/offers');
+                } catch (error) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erreur : $error')),
+                  );
+                }
+              }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer'),
           ),
         ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Titre de l\'offre',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer un titre';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _discountPercentageController,
+                decoration: const InputDecoration(
+                  labelText: 'Pourcentage de réduction',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer un pourcentage';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Veuillez entrer un nombre valide';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _endDateController,
+                decoration: const InputDecoration(
+                  labelText: 'Date de fin',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer une date';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

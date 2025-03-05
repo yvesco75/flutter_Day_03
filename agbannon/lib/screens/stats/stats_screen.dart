@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../providers/stats_provider.dart';
-import '../../providers/order_provider.dart';
 import '../../models/stats.dart';
 import '../../widgets/common/loading.dart';
 import '../../utils/formatters.dart';

@@ -55,7 +55,7 @@ class Offer {
       discountPercentage: _parseDouble(map['discountPercentage'], 0.0),
       startDate: _parseDateTime(map['startDate'], DateTime.now()),
       endDate: _parseDateTime(
-          map['endDate'], DateTime.now().add(Duration(days: 30))),
+          map['endDate'], DateTime.now().add(const Duration(days: 30))),
       isActive: map['isActive'] as bool? ?? true,
       applicableProductIds: _parseStringList(map['applicableProductIds']),
       createdAt: _parseDateTime(map['createdAt'], DateTime.now()),
