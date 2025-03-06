@@ -1,4 +1,3 @@
-// lib/screens/offers/offer_list_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -19,7 +18,7 @@ class _OfferListScreenState extends State<OfferListScreen> {
   @override
   void initState() {
     super.initState();
-    // Charger les offres lors de l'initialisation de l'écran
+    // Load offers when the screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<OfferProvider>(context, listen: false).fetchOffers();
     });
@@ -39,7 +38,7 @@ class _OfferListScreenState extends State<OfferListScreen> {
       ),
       body: Consumer<OfferProvider>(
         builder: (context, offerProvider, child) {
-          // Gestion des différents états de chargement
+          // Handle different loading states
           if (offerProvider.isLoading) {
             return const LoadingWidget();
           }
@@ -59,7 +58,7 @@ class _OfferListScreenState extends State<OfferListScreen> {
             );
           }
 
-          // Liste des offres
+          // List of offers
           final offers = offerProvider.offers;
 
           if (offers.isEmpty) {
@@ -125,7 +124,7 @@ class _OfferListScreenState extends State<OfferListScreen> {
             IconButton(
               icon: const Icon(Icons.edit, color: Colors.blue),
               onPressed: () {
-                // Navigation vers l'écran d'édition de l'offre
+                // Navigate to offer edit screen
                 context.go('/offers/edit/${offer.id}');
               },
             ),
@@ -138,7 +137,7 @@ class _OfferListScreenState extends State<OfferListScreen> {
           ],
         ),
         onTap: () {
-          // Navigation vers les détails de l'offre
+          // Navigate to offer details
           context.go('/offers/${offer.id}');
         },
       ),
@@ -159,17 +158,18 @@ class _OfferListScreenState extends State<OfferListScreen> {
           ElevatedButton(
             onPressed: () {
               if (offer.id != null) {
-                // Suppression de l'offre
-                Provider.of<OfferProvider>(context, listen: false).deleteOffer(offer
-                    .id!); // Utilisation de "!" pour indiquer que l'ID n'est pas nul
+                // Delete the offer
+                Provider.of<OfferProvider>(context, listen: false)
+                    .deleteOffer(offer.id!);
                 Navigator.of(context).pop();
               } else {
-                // Gérer le cas où l'ID est nul
+                // Handle case where ID is null
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                      content: Text(
-                          'Impossible de supprimer l\'offre : ID manquant')),
+                    content:
+                        Text('Impossible de supprimer l\'offre : ID manquant'),
+                  ),
                 );
               }
             },

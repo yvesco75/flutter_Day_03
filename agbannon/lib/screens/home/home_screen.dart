@@ -1,65 +1,51 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart'; // Import for Go Router
+import 'package:go_router/go_router.dart';
+import '../../widgets/layout/app_layout.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeInAnimation;
-  late Animation<double> _fadeOutAnimation;
-  Timer? _redirectTimer;
+  late AnimationController _controller;
+  late Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
 
-    // Configuration des animations
-    _animationController = AnimationController(
-      vsync: this,
+    // Configure l'animation de 10 secondes
+    _controller = AnimationController(
       duration: const Duration(seconds: 10),
+      vsync: this,
     );
 
-    // Animation d'apparition (0-2 secondes)
-    _fadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.4, curve: Curves.easeIn),
-      ),
-    );
-
-    // Animation de disparition (3-5 secondes)
-    _fadeOutAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
-      ),
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
     );
 
     // Démarrer l'animation
-    _animationController.forward();
+    _controller.forward();
 
-    // Configurer le timer pour la redirection après 10 secondes
-    // (à la fin de l'animation complète)
-    _redirectTimer = Timer(
-      const Duration(seconds: 10),
-      () {
-        // Utiliser Go Router pour la navigation
-        context.go('/categories'); // car categories est une sous-route de '/'
-      },
-    );
+    // Redirection à la fin de l'animation
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        // Navigue vers la page des catégories
+        if (mounted) {
+          context.go('/categories');
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
-    _redirectTimer?.cancel();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -67,92 +53,117 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        width: double.infinity,
-        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              const Color.fromARGB(255, 97, 13, 233),
-              const Color.fromARGB(255, 97, 13, 233).withOpacity(0.7),
+              Theme.of(context).primaryColor,
+              Theme.of(context).primaryColor.withOpacity(0.7),
             ],
           ),
         ),
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return Opacity(
-              opacity: _fadeInAnimation.value * _fadeOutAnimation.value,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Logo ou icône
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.store,
-                          size: 70,
-                          color: Color.fromARGB(255, 97, 13, 233),
-                        ),
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo qui grandit
+                  ScaleTransition(
+                    scale: _animation,
+                    child: Container(
+                      height: 150,
+                      width: 150,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 40),
-
-                      // Titre principal
-                      const Text(
-                        'Bienvenue au Marché',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 1.2,
-                        ),
-                        textAlign: TextAlign.center,
+                      child: const Icon(
+                        Icons.store,
+                        size: 80,
+                        color: Colors.blue,
                       ),
-                      const SizedBox(height: 20),
-
-                      // Message de bienvenue
-                      const Text(
-                        'Chère vendeuse, découvrez notre plateforme pour vendre vos produits en toute simplicité',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.white,
-                          height: 1.5,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 40),
-
-                      // Indicateur de chargement
-                      const SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 3,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            );
-          },
+
+                  const SizedBox(height: 40),
+
+                  // Texte qui apparaît progressivement
+                  FadeTransition(
+                    opacity: _animation,
+                    child: const Text(
+                      'Bienvenue au marché, Chère vendeuse, découvrez votre plateforme.',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Sous-titre
+                  SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.5),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: _controller,
+                      curve: Interval(0.3, 0.8, curve: Curves.easeOut),
+                    )),
+                    child: FadeTransition(
+                      opacity: CurvedAnimation(
+                        parent: _controller,
+                        curve: Interval(0.3, 0.8, curve: Curves.easeIn),
+                      ),
+                      child: const Text(
+                        'Découvrez nos produits et offres',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 60),
+
+                  // Indicateur de chargement
+                  Container(
+                    width: 200,
+                    child: Column(
+                      children: [
+                        LinearProgressIndicator(
+                          value: _animation.value,
+                          backgroundColor: Colors.white30,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Chargement... ${(_animation.value * 100).toInt()}%',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

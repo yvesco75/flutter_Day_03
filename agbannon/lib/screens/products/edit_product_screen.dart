@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:go_router/go_router.dart';
 import '../../widgets/product/product_form.dart';
 import '../../models/product.dart';
 
@@ -21,17 +22,17 @@ class _EditProductScreenState extends State<EditProductScreen> {
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
   final _quantityController = TextEditingController();
-  String _selectedCategory = '';
+  String _selectedCategoryId = '';
   File? _imageFile;
   String? _currentImageUrl;
   bool _isLoading = false;
-  List<String> _categories = [];
+  List<Map<String, String>> _categories = [];
 
   @override
   void initState() {
     super.initState();
     _loadProductData();
-    _ensureCategoriesExist();
+    _fetchCategories();
   }
 
   void _loadProductData() {
@@ -39,73 +40,35 @@ class _EditProductScreenState extends State<EditProductScreen> {
     _descriptionController.text = widget.product.description;
     _priceController.text = widget.product.price.toString();
     _quantityController.text = widget.product.quantity.toString();
-    _selectedCategory = widget.product.category;
+    _selectedCategoryId = widget.product.categoryId;
     _currentImageUrl = widget.product.imageUrl;
-  }
-
-  Future<void> _ensureCategoriesExist() async {
-    try {
-      final categoriesRef = FirebaseFirestore.instance.collection('categories');
-      final snapshot = await categoriesRef.get();
-
-      if (snapshot.docs.isEmpty) {
-        // Aucune catégorie n'existe, créons-les
-        final batch = FirebaseFirestore.instance.batch();
-
-        batch.set(categoriesRef.doc('maison'), {
-          'name': 'Maison',
-          'order': 1,
-        });
-
-        batch.set(categoriesRef.doc('vetement'), {
-          'name': 'Vêtement',
-          'order': 2,
-        });
-
-        batch.set(categoriesRef.doc('autres'), {
-          'name': 'Autres',
-          'order': 3,
-        });
-
-        await batch.commit();
-        print('Catégories initiales créées avec succès');
-      }
-
-      // Récupérer les catégories après s'être assuré qu'elles existent
-      await _fetchCategories();
-    } catch (error) {
-      print('Erreur lors de la vérification des catégories: $error');
-      // Récupérer les catégories même en cas d'erreur
-      await _fetchCategories();
-    }
   }
 
   Future<void> _fetchCategories() async {
     try {
-      final categoriesSnapshot = await FirebaseFirestore.instance
-          .collection('categories')
-          .orderBy('order')
-          .get();
+      final categoriesSnapshot =
+          await FirebaseFirestore.instance.collection('categories').get();
 
-      List<String> fetchedCategories = [];
+      List<Map<String, String>> fetchedCategories = [];
       for (var doc in categoriesSnapshot.docs) {
-        fetchedCategories.add(doc['name']);
+        fetchedCategories.add({
+          'id': doc.id,
+          'name': doc['name'] as String,
+        });
       }
 
       setState(() {
         _categories = fetchedCategories;
 
         // Vérifier si la catégorie du produit existe dans les catégories récupérées
-        if (_selectedCategory.isEmpty && _categories.isNotEmpty) {
-          _selectedCategory = _categories[0];
-        } else if (!_categories.contains(_selectedCategory) &&
+        if (_selectedCategoryId.isEmpty && _categories.isNotEmpty) {
+          _selectedCategoryId = _categories[0]['id']!;
+        } else if (!_categories
+                .any((category) => category['id'] == _selectedCategoryId) &&
             _categories.isNotEmpty) {
-          _selectedCategory = _categories[0];
+          _selectedCategoryId = _categories[0]['id']!;
         }
       });
-
-      print('Catégories récupérées: $_categories');
-      print('Catégorie sélectionnée: $_selectedCategory');
     } catch (error) {
       print('Erreur lors de la récupération des catégories: $error');
     }
@@ -143,7 +106,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
   Future<void> _updateProduct() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedCategory.isEmpty) {
+    if (_selectedCategoryId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Veuillez sélectionner une catégorie')),
       );
@@ -162,7 +125,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
         'description': _descriptionController.text.trim(),
         'price': double.parse(_priceController.text.replaceAll(',', '.')),
         'quantity': int.parse(_quantityController.text),
-        'category': _selectedCategory,
+        'categoryId': _selectedCategoryId,
         'imageUrl': imageUrl ?? _currentImageUrl ?? '',
         'updatedAt': FieldValue.serverTimestamp(),
       };
@@ -180,7 +143,8 @@ class _EditProductScreenState extends State<EditProductScreen> {
         const SnackBar(content: Text('Produit mis à jour avec succès')),
       );
 
-      Navigator.of(context).pop();
+      // Navigation vers la liste des produits de la catégorie
+      context.go('/product-list/$_selectedCategoryId');
     } catch (error) {
       setState(() {
         _isLoading = false;
@@ -221,13 +185,14 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 descriptionController: _descriptionController,
                 priceController: _priceController,
                 quantityController: _quantityController,
-                selectedCategory: _selectedCategory,
-                categories: _categories,
+                selectedCategory: _selectedCategoryId,
+                categories:
+                    _categories.map((category) => category['name']!).toList(),
                 imageFile: _imageFile,
                 currentImageUrl: _currentImageUrl,
                 onCategoryChanged: (value) {
                   setState(() {
-                    _selectedCategory = value;
+                    _selectedCategoryId = value;
                   });
                 },
                 onSelectImage: _selectImage,
@@ -292,7 +257,8 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   const SnackBar(content: Text('Produit supprimé avec succès')),
                 );
 
-                Navigator.of(context).pop();
+                // Navigation vers la liste des produits de la catégorie
+                context.go('/product-list/${widget.product.categoryId}');
               } catch (error) {
                 setState(() {
                   _isLoading = false;

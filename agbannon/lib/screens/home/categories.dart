@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/category.dart';
 import '../../widgets/common/app_bar.dart';
 import '../../widgets/common/drawer.dart';
-import '../../widgets/common/bottom_nav.dart'; // Importez BottomNavBar
 
 class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({Key? key}) : super(key: key);
@@ -20,12 +19,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   String? _selectedCategoryId;
   bool _isEditing = false;
-  int _selectedIndex = 0; // Index sélectionné pour la BottomNavBar
 
-  // Nouvelle méthode pour naviguer vers la liste des produits
-  void _navigateToProductList(String categoryId, String categoryName) {
-    GoRouter.of(context).go('/categories/$categoryId/products',
-        extra: {'categoryName': categoryName});
+  void _navigateToProductList(String categoryId) {
+    GoRouter.of(context).go('/product-list/$categoryId');
   }
 
   @override
@@ -59,24 +55,31 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         return;
       }
 
+      // Correction: Modification de categoryData pour inclure uniquement les champs nécessaires
+      // et ajouter updatedAt pour la mise à jour
       final categoryData = {
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'createdAt': FieldValue.serverTimestamp(),
       };
 
       if (_isEditing && _selectedCategoryId != null) {
-        // Mise à jour
+        // Mise à jour - Ajout d'un timestamp de mise à jour
         await _firestore
             .collection('categories')
             .doc(_selectedCategoryId)
-            .update(categoryData);
+            .update({
+          ...categoryData,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Catégorie mise à jour avec succès')),
         );
       } else {
-        // Création
-        await _firestore.collection('categories').add(categoryData);
+        // Création - Ajout d'un timestamp de création
+        await _firestore.collection('categories').add({
+          ...categoryData,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Catégorie ajoutée avec succès')),
         );
@@ -84,6 +87,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
       _resetForm();
     } catch (e) {
+      print('Erreur Firestore: $e'); // Debug pour voir l'erreur complète
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur: ${e.toString()}')),
       );
@@ -98,7 +102,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       _isEditing = true;
     });
 
-    // Faire défiler vers le formulaire
     _showAddEditDialog(context);
   }
 
@@ -126,6 +129,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         const SnackBar(content: Text('Catégorie supprimée avec succès')),
       );
     } catch (e) {
+      print('Erreur suppression: $e'); // Debug pour voir l'erreur complète
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur: ${e.toString()}')),
       );
@@ -183,25 +187,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     );
   }
 
-  void _onBottomNavBarItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
-    // Gérer la navigation en fonction de l'index sélectionné
-    switch (index) {
-      case 0: // Accueil
-        GoRouter.of(context).go('/home');
-        break;
-      case 1: // Catégories (rester sur la page actuelle)
-        break;
-      case 2: // Profil
-        GoRouter.of(context).go('/profile');
-        break;
-      // Ajoutez d'autres cas pour les autres éléments de la barre de navigation
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -236,6 +221,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               stream: _categoriesStream,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
+                  print('Erreur StreamBuilder: ${snapshot.error}'); // Debug
                   return Center(
                     child: Text('Erreur: ${snapshot.error}'),
                   );
@@ -254,14 +240,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   );
                 }
 
-                // Convertir les documents en objets Category
+                // Correction: Modification de la conversion des documents
                 final categories = snapshot.data!.docs.map((doc) {
                   final data = doc.data() as Map<String, dynamic>;
-                  return Category(
-                    id: doc.id,
-                    name: data['name'] ?? '',
-                    description: data['description'],
-                  );
+                  return Category.fromMap(data, doc.id);
                 }).toList();
 
                 return Padding(
@@ -285,10 +267,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             ),
           ),
         ],
-      ),
-      bottomNavigationBar: BottomNavBar(
-        selectedIndex: _selectedIndex,
-        onItemTapped: _onBottomNavBarItemTapped,
       ),
     );
   }
@@ -321,8 +299,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         ),
         child: InkWell(
           onTap: () {
-            // Utiliser la nouvelle méthode de navigation
-            _navigateToProductList(category.id, category.name);
+            _navigateToProductList(category.id);
           },
           borderRadius: BorderRadius.circular(12),
           child: Padding(
@@ -421,8 +398,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   children: [
                     ElevatedButton(
                       onPressed: () {
-                        // Utiliser la nouvelle méthode de navigation
-                        _navigateToProductList(category.id, category.name);
+                        _navigateToProductList(category.id);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).primaryColor,

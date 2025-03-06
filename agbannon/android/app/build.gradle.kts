@@ -19,7 +19,7 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "1.9"
     }
 
     defaultConfig {
@@ -47,7 +47,7 @@ flutter {
 }
 
 
-dependencies {
+dependencies { 
     implementation("com.google.firebase:firebase-analytics")
     // Autres dépendances Firebase si nécessaire
 }

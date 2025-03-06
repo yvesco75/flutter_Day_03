@@ -18,8 +18,8 @@ class ChartPoint {
 class ProductStat {
   final String id;
   final String name;
-  final int quantity;
-  final double revenue;
+  int quantity; // Changed from final to mutable
+  double revenue;
   final double cost;
 
   ProductStat({
@@ -129,9 +129,10 @@ class SalesStats {
     List<ChartPoint> chartPoints = [];
     if (json['salesChart'] != null) {
       chartPoints = (json['salesChart'] as List)
-          .map((point) => ChartPoint(
-                label: point['label'],
-                value: point['value'].toDouble(),
+          .map((dynamic point) => ChartPoint(
+                // Added dynamic
+                label: point['label'] as String, // Added as String
+                value: (point['value'] as num).toDouble(), // Added as num
               ))
           .toList();
     }
@@ -140,12 +141,13 @@ class SalesStats {
     List<ProductStat> topProductsList = [];
     if (json['topProducts'] != null) {
       topProductsList = (json['topProducts'] as List)
-          .map((product) => ProductStat(
-                id: product['id'],
-                name: product['name'],
-                quantity: product['quantity'],
-                revenue: product['revenue'].toDouble(),
-                cost: product['cost'].toDouble(),
+          .map((dynamic product) => ProductStat(
+                // Added dynamic
+                id: product['id'] as String, // Added as String
+                name: product['name'] as String, // Added as String
+                quantity: product['quantity'] as int, // Added as int
+                revenue: (product['revenue'] as num).toDouble(), // Added as num
+                cost: (product['cost'] as num).toDouble(), // Added as num
               ))
           .toList();
     }
@@ -154,12 +156,13 @@ class SalesStats {
     List<ProductStat> productPerformanceList = [];
     if (json['productPerformance'] != null) {
       productPerformanceList = (json['productPerformance'] as List)
-          .map((product) => ProductStat(
-                id: product['id'],
-                name: product['name'],
-                quantity: product['quantity'],
-                revenue: product['revenue'].toDouble(),
-                cost: product['cost'].toDouble(),
+          .map((dynamic product) => ProductStat(
+                // Added dynamic
+                id: product['id'] as String, // Added as String
+                name: product['name'] as String, // Added as String
+                quantity: product['quantity'] as int, // Added as int
+                revenue: (product['revenue'] as num).toDouble(), // Added as num
+                cost: (product['cost'] as num).toDouble(), // Added as num
               ))
           .toList();
     }
@@ -168,11 +171,12 @@ class SalesStats {
     List<LowStockProduct> lowStockList = [];
     if (json['lowStockProducts'] != null) {
       lowStockList = (json['lowStockProducts'] as List)
-          .map((product) => LowStockProduct(
-                id: product['id'],
-                name: product['name'],
-                currentStock: product['currentStock'],
-                minStock: product['minStock'],
+          .map((dynamic product) => LowStockProduct(
+                // Added dynamic
+                id: product['id'] as String, // Added as String
+                name: product['name'] as String, // Added as String
+                currentStock: product['currentStock'] as int, // Added as int
+                minStock: product['minStock'] as int, // Added as int
               ))
           .toList();
     }
@@ -181,28 +185,31 @@ class SalesStats {
     Map<String, int> ordersByStatus = {};
     if (json['ordersByStatus'] != null) {
       json['ordersByStatus'].forEach((key, value) {
-        ordersByStatus[key] = value;
+        ordersByStatus[key as String] = value as int; // Added type casting
       });
     }
 
     Map<String, double> paymentMethods = {};
     if (json['paymentMethods'] != null) {
       json['paymentMethods'].forEach((key, value) {
-        paymentMethods[key] = value.toDouble();
+        paymentMethods[key as String] =
+            (value as num).toDouble(); // Added type casting
       });
     }
 
     Map<int, double> salesByHour = {};
     if (json['salesByHour'] != null) {
       json['salesByHour'].forEach((key, value) {
-        salesByHour[int.parse(key)] = value.toDouble();
+        salesByHour[int.parse(key as String)] =
+            (value as num).toDouble(); // Added type casting
       });
     }
 
     Map<String, double> salesByCategory = {};
     if (json['salesByCategory'] != null) {
       json['salesByCategory'].forEach((key, value) {
-        salesByCategory[key] = value.toDouble();
+        salesByCategory[key as String] =
+            (value as num).toDouble(); // Added type casting
       });
     }
 
@@ -210,20 +217,24 @@ class SalesStats {
     List<double> weeklySalesList = [];
     if (json['weeklySales'] != null) {
       weeklySalesList = (json['weeklySales'] as List<dynamic>)
-          .map<double>((item) => item.toDouble())
+          .map<double>(
+              (dynamic item) => (item as num).toDouble()) // Added dynamic + num
           .toList();
     }
 
     return SalesStats(
-      totalRevenue: json['totalRevenue']?.toDouble() ?? 0,
-      totalCost: json['totalCost']?.toDouble() ?? 0,
-      totalOrders: json['totalOrders'] ?? 0,
-      totalCustomers: json['totalCustomers'] ?? 0,
-      averageOrderValue: json['averageOrderValue']?.toDouble() ?? 0,
-      revenueGrowth: json['revenueGrowth']?.toDouble(),
-      ordersGrowth: json['ordersGrowth']?.toDouble(),
-      aovGrowth: json['aovGrowth']?.toDouble(),
-      customersGrowth: json['customersGrowth']?.toDouble(),
+      totalRevenue:
+          (json['totalRevenue'] as num?)?.toDouble() ?? 0, // Added num?
+      totalCost: (json['totalCost'] as num?)?.toDouble() ?? 0, // Added num?
+      totalOrders: json['totalOrders'] as int? ?? 0, // Added int?
+      totalCustomers: json['totalCustomers'] as int? ?? 0, // Added int?
+      averageOrderValue:
+          (json['averageOrderValue'] as num?)?.toDouble() ?? 0, // Added num?
+      revenueGrowth: (json['revenueGrowth'] as num?)?.toDouble(), // Added num?
+      ordersGrowth: (json['ordersGrowth'] as num?)?.toDouble(), // Added num?
+      aovGrowth: (json['aovGrowth'] as num?)?.toDouble(), // Added num?
+      customersGrowth:
+          (json['customersGrowth'] as num?)?.toDouble(), // Added num?
       salesChart: chartPoints,
       ordersByStatus: ordersByStatus,
       paymentMethods: paymentMethods,
@@ -233,18 +244,18 @@ class SalesStats {
       productPerformance: productPerformanceList,
       lowStockProducts: lowStockList,
       startDate: json['startDate'] != null
-          ? DateTime.parse(json['startDate'])
-          : DateTime.now(), // À ajuster si vous avez une valeur de date
+          ? DateTime.parse(json['startDate'] as String) //Added as String
+          : DateTime.now(),
       endDate: json['endDate'] != null
-          ? DateTime.parse(json['endDate'])
-          : DateTime.now(), // À ajuster si vous avez une valeur de date
+          ? DateTime.parse(json['endDate'] as String) //Added as String
+          : DateTime.now(),
       weeklySales: weeklySalesList, // Assign weeklySalesList
     );
   }
 
   // Méthode pour convertir en JSON
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = {};
+    final Map<String, dynamic> data = <String, dynamic>{}; // Short form
 
     data['totalRevenue'] = totalRevenue;
     data['totalCost'] = totalCost;
@@ -268,10 +279,8 @@ class SalesStats {
     data['paymentMethods'] = paymentMethods;
 
     // Conversion du Map<int, double> en Map<String, dynamic>
-    data['salesByHour'] = {};
-    salesByHour.forEach((key, value) {
-      data['salesByHour'][key.toString()] = value;
-    });
+    data['salesByHour'] =
+        salesByHour.map((key, value) => MapEntry(key.toString(), value));
 
     data['salesByCategory'] = salesByCategory;
 

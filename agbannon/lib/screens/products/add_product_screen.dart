@@ -110,14 +110,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
     try {
       final imageUrl = await _uploadImage();
 
-      await FirebaseFirestore.instance.collection('products').add({
+      final productData = {
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
         'price': double.parse(_priceController.text.trim()),
         'categoryId': _selectedCategoryId,
         'imageUrl': imageUrl,
         'createdAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      final docRef = await FirebaseFirestore.instance
+          .collection('products')
+          .add(productData);
 
       if (!mounted) return;
 
@@ -129,7 +133,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       );
 
       // Navigation vers la liste des produits de la catégorie
-      context.go('/categories/$_selectedCategoryId/products');
+      context.go('/product-list/$_selectedCategoryId');
     } catch (e) {
       if (!mounted) return;
 
@@ -155,8 +159,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
         title: const Text('Ajouter un produit'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () =>
-              context.go('/categories'), // Retourne à la liste des catégories
+          onPressed: () {
+            // Si on avait une catégorie initiale, on retourne à la liste des produits de cette catégorie
+            if (widget.initialCategoryId != null) {
+              context.go('/product-list/${widget.initialCategoryId}');
+            } else {
+              // Sinon on retourne à la liste des catégories
+              context.go('/categories');
+            }
+          },
         ),
       ),
       body: _isLoading

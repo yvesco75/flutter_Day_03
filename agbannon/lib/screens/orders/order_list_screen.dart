@@ -4,7 +4,6 @@ import '../../models/order.dart';
 import '../../providers/order_provider.dart';
 import '../../widgets/order/order_card.dart';
 import 'order_detail_screen.dart';
-import '../../widgets/common/bottom_nav.dart';
 import 'package:go_router/go_router.dart';
 
 class OrderListScreen extends StatefulWidget {
@@ -20,32 +19,6 @@ class _OrderListScreenState extends State<OrderListScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isLoading = false;
-  int _currentIndex = 2; // Index pour les commandes
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
-
-    // Gérer la navigation en fonction de l'index sélectionné
-    switch (index) {
-      case 0:
-        GoRouter.of(context).go('/home');
-        break;
-      case 1:
-        GoRouter.of(context).go('/categories');
-        break;
-      case 2:
-        // Reste sur la page des commandes
-        break;
-      case 3:
-        GoRouter.of(context).go('/stats');
-        break;
-      case 4:
-        GoRouter.of(context).go('/offers');
-        break;
-    }
-  }
 
   @override
   void initState() {
@@ -120,10 +93,6 @@ class _OrderListScreenState extends State<OrderListScreen>
                 },
               ),
             ),
-      bottomNavigationBar: BottomNavBar(
-        selectedIndex: _currentIndex,
-        onItemTapped: _onItemTapped,
-      ),
     );
   }
 

@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../../providers/stats_provider.dart';
+
 import '../../models/stats.dart';
-import '../../widgets/common/loading.dart';
-import '../../utils/formatters.dart';
-import '../../widgets/common/bottom_nav.dart'; // Import BottomNavBar
-import 'package:go_router/go_router.dart';
+import '../../utils/formatters.dart'; // Ensure this exists
+import '../../widgets/stats/sales_chart.dart'; // Ensure this exists
 
 class StatsScreen extends StatefulWidget {
   static const routeName = '/stats';
@@ -24,7 +22,10 @@ class _StatsScreenState extends State<StatsScreen>
   SalesPeriod _selectedPeriod = SalesPeriod.week;
   late DateTime _startDate;
   late DateTime _endDate;
-  int _currentIndex = 3; // Index pour les statistiques
+  bool _isLoading = true;
+  String? _errorMessage;
+  SalesStats _stats =
+      SalesStats.empty(); // Initialize with empty SalesStats object
 
   @override
   void initState() {
@@ -48,7 +49,6 @@ class _StatsScreenState extends State<StatsScreen>
         _endDate = now;
         break;
       case SalesPeriod.week:
-        // Début de la semaine (lundi)
         _startDate = now.subtract(Duration(days: now.weekday - 1));
         _startDate =
             DateTime(_startDate.year, _startDate.month, _startDate.day);
@@ -63,23 +63,230 @@ class _StatsScreenState extends State<StatsScreen>
         _endDate = now;
         break;
       case SalesPeriod.custom:
-        // Dans ce cas, on garde les dates existantes
+        // In this case, keep the existing dates.
         break;
     }
   }
 
   Future<void> _loadStats() async {
-    // Load the stats data
-    await Provider.of<StatsProvider>(context, listen: false)
-        .fetchStats(_startDate, _endDate);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      // Fetch sales data from Firestore
+      final salesData = await _fetchSalesData(_startDate, _endDate);
+
+      // Calculate statistics from the sales data
+      final stats = _calculateStats(salesData);
+
+      setState(() {
+        _stats = stats;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
-  void _changePeriod(SalesPeriod period) {
-    setState(() {
-      _selectedPeriod = period;
-    });
-    _setupDateRange();
-    _loadStats();
+  Future<List<Map<String, dynamic>>> _fetchSalesData(
+      DateTime start, DateTime end) async {
+    final firestore = FirebaseFirestore.instance;
+    final startTimestamp = Timestamp.fromDate(start);
+    final endTimestamp = Timestamp.fromDate(end.add(const Duration(days: 1)));
+
+    final ordersSnapshot = await firestore
+        .collection('orders')
+        .where('createdAt', isGreaterThanOrEqualTo: startTimestamp)
+        .where('createdAt', isLessThan: endTimestamp)
+        .get();
+
+    final List<Map<String, dynamic>> orders = [];
+    for (var doc in ordersSnapshot.docs) {
+      final data = doc.data();
+      data['id'] = doc.id;
+      orders.add(data);
+    }
+
+    return orders;
+  }
+
+  SalesStats _calculateStats(List<Map<String, dynamic>> salesData) {
+    // Initialize variables for calculations
+    double totalRevenue = 0;
+    double totalCost = 0; // Addition of totalCost
+    int totalOrders = salesData.length;
+    Set<String> uniqueCustomers = {};
+    Map<String, int> ordersByStatus = {};
+    Map<String, double> paymentMethods = {}; // Addition of paymentMethods
+    Map<int, double> salesByHour = {}; // Addition of salesByHour
+    Map<String, double> salesByCategory = {}; // Addition of salesByCategory
+    Map<String, ProductStat> productsMap = {};
+    List<LowStockProduct> lowStockProducts = []; // Addition of lowStockProducts
+    List<double> weeklySales = []; // Addition of weeklySales
+
+    // Maps for the evolution of sales according to the period
+    final Map<String, double> salesByPeriod = {};
+
+    // Browse commands to calculate statistics
+    for (var order in salesData) {
+      // Verify if the necessary fields exist
+      if (order['total'] != null) {
+        totalRevenue += (order['total'] as num).toDouble();
+      }
+      if (order['cost'] != null) {
+        totalCost += (order['cost'] as num).toDouble(); // Addition of totalCost
+      }
+
+      if (order['customerId'] != null) {
+        uniqueCustomers.add(order['customerId'].toString());
+      }
+
+      if (order['status'] != null) {
+        final status = order['status'].toString();
+        ordersByStatus[status] = (ordersByStatus[status] ?? 0) + 1;
+      }
+
+      // Calculate the period date for the chart
+      if (order['createdAt'] != null) {
+        final createdAt = (order['createdAt'] as Timestamp).toDate();
+        String periodKey;
+
+        switch (_selectedPeriod) {
+          case SalesPeriod.day:
+            periodKey = DateFormat('HH:00').format(createdAt);
+            break;
+          case SalesPeriod.week:
+            periodKey = DateFormat('EEE').format(createdAt);
+            break;
+          case SalesPeriod.month:
+            periodKey = DateFormat('dd').format(createdAt);
+            break;
+          case SalesPeriod.year:
+            periodKey = DateFormat('MMM').format(createdAt);
+            break;
+          case SalesPeriod.custom:
+            // For a custom period, the days are used
+            periodKey = DateFormat('dd/MM').format(createdAt);
+            break;
+        }
+
+        salesByPeriod[periodKey] = (salesByPeriod[periodKey] ?? 0) +
+            (order['total'] != null ? (order['total'] as num).toDouble() : 0);
+      }
+
+      // Calculate product statistics
+      if (order['items'] != null) {
+        final items = order['items'] as List<dynamic>;
+        for (var item in items) {
+          if (item['productId'] != null &&
+              item['name'] != null &&
+              item['price'] != null &&
+              item['quantity'] != null &&
+              item['cost'] != null) {
+            // Addition of cost
+            final productId = item['productId'].toString();
+            final name = item['name'].toString();
+            final price = (item['price'] as num).toDouble();
+            final quantity = (item['quantity'] as num).toInt();
+            final revenue = price * quantity;
+            final cost = (item['cost'] as num).toDouble(); // Addition of cost
+
+            if (productsMap.containsKey(productId)) {
+              productsMap[productId]!.quantity += quantity;
+              productsMap[productId]!.revenue += revenue;
+            } else {
+              productsMap[productId] = ProductStat(
+                id: productId,
+                name: name,
+                quantity: quantity,
+                revenue: revenue,
+                cost: cost, // Addition of cost
+              );
+            }
+          }
+        }
+      }
+
+      // Adding data for paymentMethods, salesByHour, salesByCategory, etc.
+      if (order['paymentMethod'] != null) {
+        final paymentMethod = order['paymentMethod'].toString();
+        paymentMethods[paymentMethod] = (paymentMethods[paymentMethod] ?? 0) +
+            (order['total'] as num).toDouble();
+      }
+
+      if (order['createdAt'] != null) {
+        final hour = (order['createdAt'] as Timestamp).toDate().hour;
+        salesByHour[hour] =
+            (salesByHour[hour] ?? 0) + (order['total'] as num).toDouble();
+      }
+
+      if (order['category'] != null) {
+        final category = order['category'].toString();
+        salesByCategory[category] = (salesByCategory[category] ?? 0) +
+            (order['total'] as num).toDouble();
+      }
+    }
+
+    // Calculate the average order value
+    final averageOrderValue =
+        totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
+
+    // Convert the sales data into points for the chart
+    final List<ChartPoint> salesChart = [];
+    final sortedPeriods = salesByPeriod.keys.toList()..sort();
+    for (var period in sortedPeriods) {
+      salesChart.add(ChartPoint(
+        label: period,
+        value: salesByPeriod[period]!,
+      ));
+    }
+
+    // Sort products by revenue
+    final topProducts = productsMap.values.toList()
+      ..sort((a, b) => b.revenue.compareTo(a.revenue));
+    // Simulate data for productPerformance and lowStockProducts
+    final productPerformance = topProducts.take(5).toList(); // Example
+    lowStockProducts = productsMap.values
+        .where((product) => product.quantity < 10) // Example of threshold
+        .map((product) => LowStockProduct(
+              id: product.id,
+              name: product.name,
+              currentStock: product.quantity,
+              minStock: 10, // Example of threshold
+            ))
+        .toList();
+
+    // Simulate data for weeklySales
+    weeklySales = List.generate(
+        7, (index) => salesByPeriod.values.elementAtOrNull(index) ?? 0.0);
+
+    // Create and return the SalesStats object
+    return SalesStats(
+      totalRevenue: totalRevenue,
+      totalCost: totalCost,
+      totalOrders: totalOrders,
+      totalCustomers: uniqueCustomers.length,
+      averageOrderValue: averageOrderValue,
+      revenueGrowth: 5.2, // Simulated
+      ordersGrowth: 3.7, // Simulated
+      aovGrowth: 1.5, // Simulated
+      customersGrowth: 4.8, // Simulated
+      salesChart: salesChart,
+      ordersByStatus: ordersByStatus,
+      paymentMethods: paymentMethods,
+      salesByHour: salesByHour,
+      salesByCategory: salesByCategory,
+      topProducts: topProducts,
+      productPerformance: productPerformance,
+      lowStockProducts: lowStockProducts,
+      startDate: _startDate,
+      endDate: _endDate,
+      weeklySales: weeklySales,
+    );
   }
 
   Future<void> _selectCustomDateRange() async {
@@ -110,29 +317,12 @@ class _StatsScreenState extends State<StatsScreen>
     }
   }
 
-  void _onItemTapped(int index) {
+  void _changePeriod(SalesPeriod period) {
     setState(() {
-      _currentIndex = index;
+      _selectedPeriod = period;
+      _setupDateRange();
+      _loadStats();
     });
-
-    // Gérer la navigation en fonction de l'index sélectionné
-    switch (index) {
-      case 0:
-        GoRouter.of(context).go('/home');
-        break;
-      case 1:
-        GoRouter.of(context).go('/categories');
-        break;
-      case 2:
-        GoRouter.of(context).go('/orders');
-        break;
-      case 3:
-        // Reste sur la page des statistiques
-        break;
-      case 4:
-        GoRouter.of(context).go('/offers');
-        break;
-    }
   }
 
   @override
@@ -149,41 +339,25 @@ class _StatsScreenState extends State<StatsScreen>
           ],
         ),
       ),
-      body: Consumer<StatsProvider>(
-        builder: (context, statsProvider, _) {
-          if (statsProvider.isLoading) {
-            return const LoadingWidget();
-          } else if (statsProvider.errorMessage != null) {
-            return Center(
-              child: Text('Error: ${statsProvider.errorMessage}'),
-            );
-          } else if (statsProvider.stats == null) {
-            return const Center(
-              child: Text('No data available'),
-            );
-          } else {
-            return Column(
-              children: [
-                _buildPeriodSelector(),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildOverviewTab(statsProvider.stats!),
-                      _buildSalesTab(),
-                      _buildProductsTab(),
-                    ],
-                  ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+              ? Center(child: Text('Erreur: $_errorMessage'))
+              : Column(
+                  children: [
+                    _buildPeriodSelector(),
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildOverviewTab(_stats),
+                          _buildSalesTab(_stats),
+                          _buildProductsTab(_stats),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            );
-          }
-        },
-      ),
-      bottomNavigationBar: BottomNavBar(
-        selectedIndex: _currentIndex,
-        onItemTapped: _onItemTapped,
-      ),
     );
   }
 
@@ -278,7 +452,7 @@ class _StatsScreenState extends State<StatsScreen>
           const Text(
             'Répartition des commandes',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -288,7 +462,7 @@ class _StatsScreenState extends State<StatsScreen>
           const Text(
             'Top 5 des produits',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -310,28 +484,35 @@ class _StatsScreenState extends State<StatsScreen>
             CurrencyFormatter.formatPrice(stats.totalRevenue),
             Icons.attach_money,
             Colors.green,
-            stats.revenueGrowth,
+            stats.revenueGrowth ?? 0.0,
           ),
           _buildSummaryCard(
-            'Commandes',
+            'Coût total',
+            CurrencyFormatter.formatPrice(stats.totalCost),
+            Icons.money_off,
+            Colors.redAccent,
+            stats.revenueGrowth ?? 0.0,
+          ),
+          _buildSummaryCard(
+            'Nombre de commandes',
             stats.totalOrders.toString(),
-            Icons.shopping_bag,
+            Icons.shopping_cart,
             Colors.blue,
-            stats.ordersGrowth,
+            stats.ordersGrowth ?? 0.0,
+          ),
+          _buildSummaryCard(
+            'Nombre de clients',
+            stats.totalCustomers.toString(),
+            Icons.people,
+            Colors.orange,
+            stats.customersGrowth ?? 0.0,
           ),
           _buildSummaryCard(
             'Panier moyen',
             CurrencyFormatter.formatPrice(stats.averageOrderValue),
-            Icons.shopping_cart,
-            Colors.orange,
-            stats.aovGrowth,
-          ),
-          _buildSummaryCard(
-            'Clients',
-            stats.totalCustomers.toString(),
-            Icons.people,
+            Icons.shopping_basket,
             Colors.purple,
-            stats.customersGrowth,
+            stats.aovGrowth ?? 0.0,
           ),
         ],
       ),
@@ -339,278 +520,255 @@ class _StatsScreenState extends State<StatsScreen>
   }
 
   Widget _buildSummaryCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-    double? growth,
-  ) {
+      String title, String value, IconData icon, Color color, double growth) {
     return Container(
+      width: 200,
+      padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(right: 16),
-      child: SizedBox(
-        width: 170,
-        child: Card(
-          elevation: 4,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: color.withOpacity(0.2),
-                      child: Icon(
-                        icon,
-                        color: color,
-                        size: 20,
-                      ),
-                    ),
-                    if (growth != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: growth >= 0
-                              ? Colors.green.withOpacity(0.2)
-                              : Colors.red.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              growth >= 0
-                                  ? Icons.arrow_upward
-                                  : Icons.arrow_downward,
-                              color: growth >= 0 ? Colors.green : Colors.red,
-                              size: 12,
-                            ),
-                            Text(
-                              '${growth.abs().toStringAsFixed(1)}%',
-                              style: TextStyle(
-                                color: growth >= 0 ? Colors.green : Colors.red,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
-                const Spacer(),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ],
+              ),
+            ],
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ),
+          Row(
+            children: [
+              Icon(
+                growth > 0 ? Icons.arrow_upward : Icons.arrow_downward,
+                color: growth > 0 ? Colors.green : Colors.red,
+              ),
+              Text(
+                '${growth.toStringAsFixed(1)}%',
+                style: TextStyle(
+                  color: growth > 0 ? Colors.green : Colors.red,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildSalesChart(SalesStats stats) {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Évolution des ventes',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Évolution des ventes',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 200,
-              child: (stats.salesChart.isEmpty)
-                  ? const Center(
-                      child: Text('Aucune donnée de vente disponible'),
-                    )
-                  : LineChart(
-                      LineChartData(
-                        gridData: FlGridData(show: false),
-                        titlesData: FlTitlesData(
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 40,
-                              getTitlesWidget: (value, meta) {
-                                return Text(
-                                  value >= 1000
-                                      ? '${(value / 1000).toStringAsFixed(0)}k'
-                                      : value.toStringAsFixed(0),
-                                  style: const TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              getTitlesWidget: (value, meta) {
-                                final index = value.toInt();
-                                if (index >= 0 &&
-                                    index < stats.salesChart.length) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 8),
-                                    child: Text(
-                                      stats.salesChart[index].label,
-                                      style: const TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  );
-                                }
-                                return const Text('');
-                              },
-                              reservedSize: 30,
-                            ),
-                          ),
-                          rightTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          topTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                        ),
-                        borderData: FlBorderData(show: false),
-                        lineBarsData: [
-                          LineChartBarData(
-                            spots: stats.salesChart
-                                .asMap()
-                                .entries
-                                .map((entry) => FlSpot(
-                                      entry.key.toDouble(),
-                                      entry.value.value,
-                                    ))
-                                .toList(),
-                            isCurved: true,
-                            color: Theme.of(context).primaryColor,
-                            barWidth: 4,
-                            isStrokeCapRound: true,
-                            dotData: FlDotData(show: false),
-                            belowBarData: BelowBarData(show: false),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 200,
+            child: const SalesChart(), // Supprimez le paramètre 'data'
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildOrderStatusPieChart(SalesStats stats) {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: SizedBox(
-          height: 250,
-          child: (stats.orderStatusChart.isEmpty)
-              ? const Center(
-                  child: Text('Aucune donnée sur l\'état des commandes'),
-                )
-              : PieChart(
-                  PieChartData(
-                    sections: stats.orderStatusChart.map((data) {
-                      return PieChartSectionData(
-                        color: data.color,
-                        value: data.value,
-                        title: '${data.value.toStringAsFixed(1)}%',
-                        radius: 60,
-                        titleStyle: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      );
-                    }).toList(),
-                    borderData: FlBorderData(show: false),
-                    sectionsSpace: 0,
-                    centerSpaceRadius: 40,
-                  ),
-                ),
+    final ordersByStatus = stats.ordersByStatus;
+    final totalOrders = stats.totalOrders;
+
+    List<PieChartSectionData> sections = ordersByStatus.entries.map((entry) {
+      final status = entry.key;
+      final count = entry.value;
+      final percentage = (count / totalOrders) * 100;
+      Color color;
+
+      switch (status) {
+        case 'pending':
+          color = Colors.orange;
+          break;
+        case 'processing':
+          color = Colors.blue;
+          break;
+        case 'completed':
+          color = Colors.green;
+          break;
+        case 'cancelled':
+          color = Colors.red;
+          break;
+        default:
+          color = Colors.grey;
+      }
+
+      return PieChartSectionData(
+        color: color,
+        value: percentage,
+        title: '${percentage.toStringAsFixed(1)}%',
+        radius: 50,
+        titleStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
         ),
+      );
+    }).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 200,
+            child: PieChart(
+              PieChartData(
+                sections: sections,
+                centerSpaceRadius: 40,
+                borderData: FlBorderData(show: false),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: ordersByStatus.entries.map((entry) {
+              final status = entry.key;
+              final count = entry.value;
+              Color color;
+
+              switch (status) {
+                case 'pending':
+                  color = Colors.orange;
+                  break;
+                case 'processing':
+                  color = Colors.blue;
+                  break;
+                case 'completed':
+                  color = Colors.green;
+                  break;
+                case 'cancelled':
+                  color = Colors.red;
+                  break;
+                default:
+                  color = Colors.grey;
+              }
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.circle, color: color, size: 16),
+                    const SizedBox(width: 8),
+                    Text('$status: $count'),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildTopProductsList(SalesStats stats) {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: stats.topProducts.length,
-              separatorBuilder: (context, index) => const Divider(),
-              itemBuilder: (context, index) {
-                final product = stats.topProducts[index];
-                return ListTile(
-                  leading: CircleAvatar(
-                    child: Text('${index + 1}'),
-                  ),
-                  title: Text(product.name),
-                  trailing: Text(CurrencyFormatter.formatPrice(product.revenue),
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                );
-              },
+    final topProducts = stats.topProducts;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: topProducts.map((product) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(product.name),
+                Text(
+                    '${product.quantity} unités - ${CurrencyFormatter.formatPrice(product.revenue)}'),
+              ],
             ),
-          ],
-        ),
+          );
+        }).toList(),
       ),
     );
   }
 
-  Widget _buildSalesTab() {
+  Widget _buildSalesTab(SalesStats stats) {
     return const Center(
-      child: Text('Sales Data Content'),
+      child: Text('Sales Tab Content'),
     );
   }
 
-  Widget _buildProductsTab() {
+  Widget _buildProductsTab(SalesStats stats) {
     return const Center(
-      child: Text('Products Data Content'),
+      child: Text('Products Tab Content'),
     );
   }
-}
-
-enum SalesPeriod {
-  day,
-  week,
-  month,
-  year,
-  custom,
 }
