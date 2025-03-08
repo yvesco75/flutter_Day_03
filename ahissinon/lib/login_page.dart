@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'auth.dart'; // Assurez-vous que le chemin est correct
+import 'auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.title});
@@ -19,14 +19,12 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordConfirmController = TextEditingController();
   bool _isLoading = false;
   bool _forLogin = true;
-  final Auth _auth = Auth(); // Instance de Auth
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.orange,
-        title: Text(_forLogin ? widget.title : "Inscription"),
+        backgroundColor: Colors.grey[300],
+        title: Text(_forLogin ? widget.title : "Sign Up Page"),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(20),
@@ -44,7 +42,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Email requis';
+                    return 'Email is required';
                   } else {
                     return null;
                   }
@@ -56,12 +54,12 @@ class _LoginPageState extends State<LoginPage> {
                 controller: _passwordController,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.lock),
-                  labelText: 'Mot de passe',
+                  labelText: 'Password',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Veuillez entrer un mot de passe';
+                    return 'Veuillez entrez un Password';
                   } else {
                     return null;
                   }
@@ -74,14 +72,14 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _passwordConfirmController,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.lock),
-                    labelText: 'Confirmer le mot de passe',
+                    labelText: 'Confirmer Password',
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Veuillez confirmer votre mot de passe';
+                      return ' Veuillez Confirmer votre Password ';
                     } else if (value != _passwordController.text) {
-                      return 'Les deux mots de passe ne correspondent pas';
+                      return 'Les deux password ne correspondes pas';
                     } else {
                       return null;
                     }
@@ -91,44 +89,51 @@ class _LoginPageState extends State<LoginPage> {
                 margin: EdgeInsets.only(top: 30, bottom: 20),
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isLoading
-                      ? null
-                      : () async {
-                          if (_formKey.currentState!.validate()) {
-                            setState(() {
-                              _isLoading = true;
-                            });
-                            // Login ou inscription
-                            try {
-                              if (_forLogin) {
-                                await _auth.loginWithEmailAndPassword(
-                                  _emailController.text,
-                                  _passwordController.text,
+                  onPressed:
+                      _isLoading
+                          ? null
+                          : () async {
+                            if (_formKey.currentState!.validate()) {
+                              setState(() {
+                                _isLoading = true;
+                              });
+                              //login
+                              try {
+                                if (_forLogin) {
+                                  await Auth().loginWithEmailAndPassword(
+                                    _emailController.text,
+                                    _passwordController.text,
+                                  );
+                                } else {
+                                  await Auth().createUserWithEmailAndPassword(
+                                    _emailController.text,
+                                    _passwordController.text,
+                                  );
+                                }
+                                setState(() {
+                                  _isLoading = true;
+                                });
+                              } on FirebaseAuthException catch (e) {
+                                setState(() {
+                                  _isLoading = true;
+                                });
+                                //message
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("${e.message}")),
                                 );
-                              } else {
-                                await _auth
-                                    .createUserWithEmailAndPassword(
-                                  _emailController.text,
-                                  _passwordController.text,
-                                );
+                                behavior:
+                                SnackBarBehavior.floating;
+                                backgroundColor:
+                                Colors.red;
+                                showCloseIcon:
+                                true;
                               }
-                              setState(() {
-                                _isLoading = false;
-                              });
-                            } on FirebaseAuthException catch (e) {
-                              if (!mounted) return; // Vérification de mounted
-                              setState(() {
-                                _isLoading = false;
-                              });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text("${e.message}")),
-                              );
                             }
-                          }
-                        },
-                  child: _isLoading
-                      ? const CircularProgressIndicator()
-                      : Text(_forLogin ? 'Se connecter' : "S'inscrire"),
+                          },
+                  child:
+                      _isLoading
+                          ? const CircularProgressIndicator()
+                          : Text(_forLogin ? 'Se connecter' : "S'inscrire"),
                 ),
               ),
               SizedBox(
@@ -143,8 +148,8 @@ class _LoginPageState extends State<LoginPage> {
                   },
                   child: Text(
                     _forLogin
-                        ? "Vous n'avez pas de compte ? Inscrivez-vous"
-                        : "Vous avez déjà un compte ? Connectez-vous",
+                        ? "Vous n'avez pas un compte ?, Inscrivez-vous"
+                        : "Vous avez un compte ? Connectez-vous",
                   ),
                 ),
               ),

@@ -1,6 +1,6 @@
 import 'package:ahissinon/firebase_options.dart';
-import 'package:flutter/material.dart';
-import 'page_accueil.dart'; 
+import 'package:ahissinon/redirection.dart';
+import 'package:flutter/material.dart'; 
 import 'package:firebase_core/firebase_core.dart';
 
 
@@ -28,7 +28,11 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.orange,
       ),
-      home: const HomePage(), 
+      home: RedirectionPage(), 
     );
   }
 }
+
+
+
+

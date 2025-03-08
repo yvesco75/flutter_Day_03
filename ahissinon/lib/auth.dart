@@ -1,32 +1,26 @@
+// ignore_for_file: file_names
+
 import 'package:firebase_auth/firebase_auth.dart';
 
-class AuthService {
+class Auth {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-
   User? get currentUser => _firebaseAuth.currentUser;
-
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
-
-  // Connexion avec email et mot de passe
+  // methode de connexion avec email-pwd
   Future<void> loginWithEmailAndPassword(String email, String password) async {
-    try {
-      await _firebaseAuth.signInWithEmailAndPassword(email: email, password: password);
-    } catch (e) {
-      throw Exception("Erreur de connexion : ${e.toString()}");
-    }
+    await _firebaseAuth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
   }
 
-  // Déconnexion
+  //methode de deconnexion
   Future<void> logout() async {
     await _firebaseAuth.signOut();
   }
 
-  // Création de compte avec email et mot de passe
-  Future<void> createUserWithEmailAndPassword(String email, String password) async {
-    try {
-      await _firebaseAuth.createUserWithEmailAndPassword(email: email, password: password);
-    } catch (e) {
-      throw Exception("Erreur lors de l'inscription : ${e.toString()}");
-    }
-  }
+  //methode de creation de compte avec email-pwd
+Future<void> createUserWithEmailAndPassword(String email, String password) async{
+  await _firebaseAuth.createUserWithEmailAndPassword(email: email, password: password);
+}
 }
